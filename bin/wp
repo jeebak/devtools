@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Wrapper script for wp-cli, to work anywhere within a git tree, not restricted
+# to within the wordpress root.
+WP="$(which -a wp | grep -v "$0" | head -1)"
+
+if [[ -z "$WP" ]]; then
+  echo "Wordpress CLI not found!"
+  exit 1
+fi
+
+git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat $git_root/.git/HEAD)"
+git_head="${git_head##refs/heads/}"
+
+if [[ ! -z "$git_root" ]]; then
+  # wordpress 6, 7, and 8, all seems to have this path to this file:
+  is_wordpress="$(git ls-tree -r "$git_head" --name-only --full-tree | grep wp-admin/index.php)"
+  if [[ ! -z "$is_wordpress" ]] && [[ $(wc -l <<< "$is_wordpress") -eq 1 ]]; then
+    # Strip away: wp-admin/index.php and we'll have our: wordpress_root
+    wordpress_root="${is_wordpress/\/wp-admin\/index.php/}"
+    # Set additional option(s) to pass along to wp...
+    options=--path="$git_root/$wordpress_root"
+  fi
+fi
+
+$WP $options "$@"

@@ -1,0 +1,392 @@
+#!/usr/bin/env bash
+
+# https://gist.github.com/waylan/4080362
+
+function errcho() {
+  # echo to strerr
+  >&2 echo "$@"
+}
+
+accpl_self="${0##/*/}"
+
+[[ -f "${0%/*}/../lib/bash/colors.sh" ]] && source "${0%/*}/../lib/bash/colors.sh"
+
+function accpl.help() {
+  cat <<EOT
+Usage: $accpl_self <subcommand> [options]
+
+  System Helper Subcommands:
+    ra        Restart Apache
+    rd        Restart DnsMasq
+    rm        Restart MySQL
+
+    rdk       Restart Dock
+    rf        Restart Finder
+    rl        Restart locate database
+    rmb       Restart MenuBar
+
+    th        Toggle Hidden files (AppleShowAllFiles)
+
+    fh        Finder Shows: \$HOME
+    famf      Finder Shows: All My Files
+
+    tellit    Tell App iTunes to ... '\$1'
+
+    caff      Run caffeinate
+    os        Run opensnoop
+    pl        Run "plutil -convert xml1 -o -" in a loop for \$@
+                ("-convert" is *destructive* without the "-o -")
+    ql        Run Quick Look (qlmanage -p "\$@")
+
+    gifify    Create an animated .gif from QuickTime Player .mov passed as \$1
+                Example: $accpl_self gifify example.mov [max width (pixels)]
+    sl        Run: mdfind -name \$@ (no Reg Exp)
+
+    hda       Run: hdiutil attach \$1
+    hdc       Run: hdiutil compact \$1
+    hdcr      Run: hdiutil create "\$1" -encryption AES-128 -size "\$2" -volname "\$3" -fs JHFS+
+                   # \$1=~/Path/To/ImageName.sparsebundle, \$2=20g, \$3=ImageName
+    hdd       Run: hdiutil detach \$1
+                   # \$1=/Volumes/ImageName
+    hdr       Run: hdiutil resize \$1 \$2
+                   # \$1=20g \$2=~/Path/To/ImageName.sparsebundle
+
+    vv        Run: diskutil verifyvolume \$1
+                  # \$1=/path/to/mountpoint
+  Homebrew Helper Subcommands: poorly documented, and sequences of commands
+    bcmd      Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd)
+    buu       Run: brew update --verbose; brew upgrade --all; brew cleanup -n -s
+    bdeps     Runs: brew deps (dependencis,) on list of installed brews
+    buses     Runs: brew uses --installed, on list of installed brews
+    sphp      Switch php versions: $accpl_self sphp [phpversion, like: 53, or sys]
+                (Assumes: brew tap homebrew-php)
+  Misc.
+    cgu       Run: composer global update
+
+EOT
+}
+
+function accpl.__tell() {
+  local app="$1"
+  shift
+
+  osascript -e "
+if application \"$app\" is running then
+  tell app \"$app\" to $@
+else
+  if ((system attribute \"QUIET\" as string) is not equal to \"true\") then
+    say \"$app is not running.\"
+  end if
+end if"
+}
+
+function accpl.__verbose_run() {
+  errcho "Running: $@"
+  "$@"
+}
+
+# Apple Defaults Write
+function accpl.__adw() {
+  local domain="$1"
+  shift
+  accpl.__verbose_run defaults write "com.apple.$domain" "$@"
+}
+
+# Apple Defaults Read
+function accpl.__adr() {
+  local domain="$1"
+  shift
+  defaults read "com.apple.$domain" "$@"
+}
+
+# Apple Defaults Toggle
+function accpl.__adt() {
+  accpl.__adw "$@" -bool $([[ "$(accpl.__adr "$@")" =~ 1|yes|YES|true|TRUE ]] && echo NO || echo YES)
+}
+
+function accpl.__brew() {
+  accpl.__verbose_run brew "$@"
+}
+
+function accpl.__hdiutil() {
+  accpl.__verbose_run hdiutil "$@"
+}
+
+function accpl.__ka() {
+  accpl.__verbose_run killall -KILL "$1"
+}
+
+function accpl.__reload_plist() {
+  local plist="$1"
+  local _sudo=''
+
+  if [[ "$plist" =~ ^/Library/ ]] || [[ "$plist" =~ ^/System/Library/ ]]; then
+    _sudo='sudo'
+  fi
+
+  if [[ -f "$plist" ]]; then
+    accpl.__verbose_run $_sudo launchctl unload "$plist"
+    accpl.__verbose_run $_sudo launchctl load   "$plist"
+  else
+    errcho "$plist NOT FOUND!"
+  fi
+}
+
+function accpl.ra() {
+  pgrep -f /usr/sbin/httpd 2> /dev/null > /dev/null
+  if [ $? -eq 0 ]; then
+    errcho "Restarting system Apache..."
+    accpl.__verbose_run sudo pkill -9 -f /usr/sbin/httpd
+    accpl.__verbose_run sudo /usr/sbin/apachectl -k start
+
+    errcho "PID(s):"
+    pgrep -f /usr/sbin/httpd
+  fi
+
+  pgrep -f /usr/local/Cellar/*/httpd 2> /dev/null > /dev/null
+  if [ $? -eq 0 ]; then
+    errcho "Restarting homebrew Apache..."
+    accpl.__verbose_run sudo pkill -9 -f /usr/local/Cellar/*/httpd
+    accpl.__verbose_run sudo /usr/local/bin/apachectl -k start
+
+    errcho "PID(s):"
+    pgrep -f /usr/local/Cellar/*/httpd
+  fi
+}
+
+function accpl.rd() {
+  accpl.__reload_plist '/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist'
+}
+
+function accpl.rm() {
+  accpl.__reload_plist "$HOME/Library/LaunchAgents/homebrew.mxcl.mysql.plist"
+}
+
+# http://www.thxbye.de/mac/mac-restarting-the-mac-os-x-dock-finder-spaces-or-menubar.html
+function accpl.rdk() {
+  accpl.__ka Dock
+}
+
+function accpl.rf() {
+  accpl.__ka Finder
+}
+
+function accpl.rmb() {
+  accpl.__ka SystemUIServer
+}
+
+function accpl.rl() {
+  # Hmm... "supposed" to be called w/ "-w" option. Just noting it for now.
+  accpl.__reload_plist '/System/Library/LaunchDaemons/com.apple.locate.plist'
+}
+
+function accpl.th() {
+  # http://www.macosxtips.co.uk/index_files/quickly-show-hidden-files.php
+  # Bind: cmd-shift-. to:
+  #   bash /path/to/this/script/maccomplice th
+  # in, for example, BetterTouchTool
+  accpl.__adt finder AppleShowAllFiles
+  accpl.rf
+}
+
+function accpl.fh() {
+    accpl.__adw finder NewWindowTarget PfHm
+    accpl.__adw finder NewWindowTargetPath "file://$HOME/"
+}
+
+function accpl.famf() {
+    accpl.__adw finder NewWindowTarget PfAF
+    #accpl.__adw finder NewWindowTargetPath file:///System/Library/CoreServices/Finder.app/Contents/Resources/MyLibraries/myDocuments.cannedSearch
+}
+
+function accpl.caff() {
+  errcho "Control-c to cancel"
+  accpl.__verbose_run caffeinate "$@"
+}
+
+function accpl.os() {
+  accpl.__verbose_run sudo opensnoop "$@"
+}
+
+function accpl.gifify() {
+  # Based on: https://gist.github.com/SlexAxton/4989674
+  #   https://gist.github.com/SlexAxton/4989674#comment-1199058
+  local FFMPEG CONVERT GIFSICLE output_file maxsize tmp_prefix="/tmp/gifify-tmp-$$"
+
+  [[ -z "$1" ]]   && errcho "$(tput setaf 1)No input file given. Example: gifify example.mov [max width (pixels)]$(tput sgr 0)" && exit 1
+  [[ ! -f "$1" ]] && errcho "$(tput setaf 1)Input file: $1 does NOT exist!$(tput sgr 0)" && exit 1
+
+  FFMPEG="$(command   -v ffmpeg || command -v avconf)"  || { errcho "ffmpeg not found!"  ; exit 1; }
+  CONVERT="$(command  -v convert)"                      || { errcho "convert not found!" ; exit 1; }
+  GIFSICLE="$(command -v gifsicle)"                     || { errcho "gifsicle not found!"; exit 1; }
+
+  output_file="${1%.*}.gif"
+  [[ -f "$output_file" ]] && errcho "$output_file already exists!" && exit 1
+  [[ ! -z "$2" ]] && maxsize="-vf scale=$2:-1" || maxsize=""
+
+  errcho "$(tput setaf 2)Creating \"$output_file\"...$(tput sgr 0)"
+  "$FFMPEG" -loglevel panic -i "$1" $maxsize -r 10 -vcodec png "${tmp_prefix}-%05d.png"
+  "$CONVERT" +dither -layers Optimize "${tmp_prefix}"-*.png GIF:- | "$GIFSICLE" --no-warnings --colors 256 --delay=10 --loop --optimize=3 --multifile - > "$output_file"
+  rm "${tmp_prefix}"-*.png
+  errcho "$(tput setaf 2)Done: $output_file$(tput sgr 0)"
+}
+
+function accpl.sl() {
+  accpl.__verbose_run mdfind -name "$@"
+}
+
+function accpl.tellit() {
+  # Bind: cmd-ctrl-m to: playpause
+  #       cmd-ctrl-n to: next track
+  #       cmd-ctrl-b to: previous track
+  # in, for example, BetterTouchTool
+
+  case "$1" in
+    playpause|'next track'|'previous track')
+      QUIET=true accpl.__tell "iTunes" "$1"
+      ;;
+  esac
+}
+
+function accpl.pl() {
+  for i in "$@"; do
+    accpl.__verbose_run plutil -convert xml1 -o - "$i"
+  done
+}
+
+function accpl.ql() {
+  # http://www.makeuseof.com/tag/several-ways-to-look-beyond-quick-look-mac/
+  # Finder: spacebar or cmd-y
+  #   slideshow: cmd+option+y (note that there's an "Index Sheet" button)
+  #   zoom in/out: option/option-shift click
+  #   plugins: http://www.qlplugins.com/
+  #     brew cask install qlcolorcode qlstephen qlmarkdown quicklook-json quicklook-csv betterzipql
+  qlmanage -p "$@"
+}
+
+function accpl.bcmd() {
+  accpl.__brew commands
+}
+
+function accpl.buu() {
+  accpl.__brew update --verbose
+  accpl.__brew cask update --verbose
+  accpl.__brew upgrade --all
+  accpl.__brew cleanup -n -s # Dry-run
+}
+
+# Inspiredb by: http://zanshin.net/2014/02/03/how-to-list-brew-dependencies/
+function accpl.bdeps() {
+  local cask
+
+  while read -r cask; do
+    echo "${yellow}${cask}:${magenta}" $(brew deps "$cask") "${reset_colors}"
+  done <<< "$(brew list)"
+}
+
+function accpl.buses() {
+  local cask
+
+  while read -r cask; do
+    echo "${yellow}${cask}:${magenta}" $(brew uses --installed "$cask") "${reset_colors}"
+  done <<< "$(brew list)"
+}
+
+function accpl.sphp() {
+  # https://raw.githubusercontent.com/conradkleinespel/sphp-osx/master/sphp
+  # https://coderwall.com/p/nm_wna
+  local currentversion newversion
+
+  if [ $# -ne 1 ]; then
+    errcho "Usage: $accpl_self sphp [phpversion|sys]"
+    exit 1
+  fi
+
+  if [[ "$1" = 'sys' ]];then
+    errcho "Linking system libphp5..."
+    accpl.__verbose_run ln -svf /usr/libexec/apache2/libphp5.so /usr/local/lib/libphp5.so
+
+    errcho "Restarting Apache..."
+    accpl.ra
+
+    return
+  fi
+
+  currentversion="$(php -r "echo str_replace('.', '', substr(phpversion(), 0, 3));")"
+  newversion="$1"
+
+  accpl.__brew list "php${newversion}" 2> /dev/null > /dev/null
+
+  if [ $? -eq 0 ]; then
+    errcho "PHP version $newversion found"
+
+    errcho "Unlinking old binaries..."
+    accpl.__brew unlink "php${currentversion}" 2> /dev/null > /dev/null
+
+    errcho "Linking new binaries..."
+    accpl.__brew link --overwrite "php${newversion}"
+
+    errcho "Linking new modphp addon..."
+    accpl.__verbose_run ln -svf "$(brew list "php${newversion}" | grep libphp)" /usr/local/lib/libphp5.so
+
+    errcho "Updating version file..."
+
+    errcho "Restarting Apache..."
+    accpl.ra
+
+    errcho "Done."
+  else
+    errcho "PHP version $newversion was not found."
+    exit 1
+  fi
+}
+
+function accpl.cgu() {
+  accpl.__verbose_run composer global update
+}
+
+function accpl.hda() {
+  accpl.__hdiutil attach "$1"
+}
+function accpl.hdc() {
+  accpl.__hdiutil compact "$1"
+}
+function accpl.hdcr() {
+  accpl.__hdiutil create "$1" -encryption AES-128 -size "$2" -volname "$3" -fs JHFS+
+}
+function accpl.hdd() {
+  accpl.__hdiutil detach "$1"
+}
+function accpl.hdr() {
+  accpl.__hdiutil resize "$1" "$2"
+}
+
+function accpl.vv() {
+  accpl.__verbose_run diskutil  verifyvolume "$1"
+}
+
+# "main()" if not "source"-d
+#   declare -F, for function names
+#   declare -f, for function definitions
+if [[ "${BASH_SOURCE[0]}" = "${0}" ]]; then
+  # Allow for function names to be sym- or hard-linked to this script
+  type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self" || {
+    subcommand="$1"
+    shift
+  }
+
+  case $subcommand in
+    "" | "-h" | "--help")
+      accpl.help
+      ;;
+    *)
+      "accpl.${subcommand}" "$@"
+      if [[ $? -eq 127 ]]; then
+        cat <<EOT >&2
+Error: '$subcommand' is not a known subcommand.
+EOT
+        exit $?
+      fi
+      ;;
+  esac
+fi

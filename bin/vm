@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+VBM="$(command -v VBoxManage)"
+[[ -z "$VBM" ]] && echo "VBoxManage not found!" && exit
+
+PROMPT="[Target?<space>Action? or 'q' to quit] "
+
+while [[ "$target" != "q" ]]; do
+  VMS_ALL="$($VBM list vms | sort)"
+  VMS_ALL_COUNT=$([[ ! -z "$VMS_ALL" ]] && echo "$VMS_ALL" | wc -l || echo 0)
+
+  VMS_UP="$($VBM list runningvms)"
+
+  [[ $VMS_ALL_COUNT -eq 0 ]] && echo "You ain't got no Virtuals!" && exit
+
+  clear
+  DISPLAY_VMS="$(echo "$VMS_ALL" | cat -n)"
+  SED_SCRIPT="$(
+    sed "
+      s|{|/{|g;
+      s|}|}/ { s/^   /  */; }; |g
+    " <<< $(grep -o '{.*}' <<< "$VMS_UP")
+  )"
+
+  [[ ! -z "$cmd_to_run" ]] && echo "Success: $cmd_to_run"
+  cat <<EOT
+[VMS] * = running
+$(sed "$SED_SCRIPT" <<< "$DISPLAY_VMS")
+[CMD]
+    Target: number
+    Actions: On:   [u]p (headless,) [s]tart (GUI,) resu[m]e
+             Off:  [h]alt, [p]ause, [r]eset, [z]=suspend
+             Rm:   [d]estroy
+EOT
+  read -p "$PROMPT" target action
+
+  if [[ "$target" == "q" ]]; then
+    exit
+  elif [[ -z "$target" ]] ; then
+    continue
+  elif ! [[ $target =~ ^[0-9]+$ ]] ; then
+    echo "WTF?!?!"
+    sleep 1
+    continue
+  fi
+
+  # Start building command string...
+  uuid="$(echo "$DISPLAY_VMS" | tail -n +$target | head -1 | grep -o '{.*}')"
+
+  case "$action" in
+    # On:
+    u) subcmd="startvm";      options="--type headless";;
+    s) subcmd="startvm";      options="--type gui";;
+    m) subcmd="controlvm";    options="resume";;
+    # Off:
+    h) subcmd="controlvm";    options="poweroff";;
+    p) subcmd="controlvm";    options="pause";;
+    r) subcmd="controlvm";    options="reset";;
+    z) subcmd="controlvm";    options="savestate";;
+    # Rm:
+    d) subcmd="unregistervm"; options="--delete";;
+    # Misc
+    *) echo "WTF?!?!"; sleep 1; continue;;
+  esac
+
+  cmd_to_run="$VBM $subcmd $uuid $options"
+  echo
+  echo "Running... $cmd_to_run"
+  echo
+  $cmd_to_run
+  if [[ $? -eq 0 ]]; then
+    sleep 1
+  else
+    cmd_to_run=""
+    cat <<EOT
+
+    Uh, oh. There was a problem!
+
+EOT
+    read -p "Press [enter] to continue or [q] to quit: " target
+  fi
+done

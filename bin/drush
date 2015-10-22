@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Wrapper script for drush, to work anywhere within a git tree, not restricted
+# to within the drupal root.
+DRUSH="$(which -a drush | grep -v "$0" | head -1)"
+
+if [[ -z "$DRUSH" ]]; then
+  echo "Drush not found!"
+  exit 1
+fi
+
+# Because I always forget to: drush | less ...
+[[ $# -eq 0 ]] && exec ${PAGER:-less} <<< "$($DRUSH)"
+
+git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat $git_root/.git/HEAD)"
+git_head="${git_head##refs/heads/}"
+
+if [[ ! -z "$git_root" ]]; then
+  # Drupal 6, 7, and 8, all seems to have this path to this file:
+  is_drupal="$(git ls-tree -r "$git_head" --name-only --full-tree | grep modules/taxonomy/taxonomy.module)"
+  if [[ ! -z "$is_drupal" ]] && [[ $(wc -l <<< "$is_drupal") -eq 1 ]]; then
+    # Strip away: modules/taxonomy/taxonomy.module and we'll have our: drupal_root
+    # Drupal 8 path is (currently) prefixed: with core/ ... but, of course, it will
+    # still fail if your version of drush doesn't support Drupal 8.
+    drupal_root="$(sed 's;core[/]*$;;' <<< "${is_drupal/modules\/taxonomy\/taxonomy.module/}")"
+    # Set additional option(s) to pass along to drush...
+    options="-r ""$git_root/$drupal_root"
+  fi
+fi
+
+$DRUSH $options "$@"

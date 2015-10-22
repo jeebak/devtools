@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Wrapper script for laravel artisan, to work anywhere within a git tree, not restricted
+# to within the laravel root.
+ARTISAN="php artisan"
+
+git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat $git_root/.git/HEAD)"
+git_head="${git_head##refs/heads/}"
+
+if [[ ! -z "$git_root" ]]; then
+  # Look for artisan in repo
+  is_laravel="$(git ls-tree -r "$git_head" --name-only --full-tree | grep 'artisan$')"
+  if [[ ! -z "$is_laravel" ]] && [[ $(wc -l <<< "$is_laravel") -eq 1 ]]; then
+    # Strip away: wp-admin/index.php and we'll have our: laravel_root
+    laravel_root="${is_laravel/artisan/}"
+    # Not sure yet if we need to cd into the laravel_root or if specifying the
+    # absolute path to the artisan file is enough.
+    cd "$git_root/$laravel_root"
+  else
+    echo "This doesn't seem to be a laravel project"
+    exit 1
+  fi
+fi
+
+$ARTISAN $options "$@"
