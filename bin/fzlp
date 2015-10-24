@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# FuZzy LastPass (using fzf)
+
+export LPASS_AGENT_TIMEOUT=0
+
+self="${0##/*/}"
+destdir="$(egrep -o '[^/]+/[^/]*$' <<< "${0%/bin/$self}")"
+confdir="${XDG_CONFIG_HOME:-$HOME/.config}/$destdir/creds/lastpass"
+
+readonly LP_USERNAME_FILE="$confdir/username.txt"
+
+function cmd_exists() {
+  command -v "$1" > /dev/null 2>&1
+}
+
+function errcho() {
+  # echo to strerr
+  >&2 echo "$@"
+}
+
+function die() {
+  local exit_code
+
+  [[ -z "$2" ]] && exit_code=1 || exit_code="$2"
+  errcho "$1"
+  exit "$exit_code"
+}
+
+function set_email() {
+  local email
+
+  read -r -p "Please enter lastpass email: " email
+  [[ -z "$email" ]] && die "No email provided, aborting."
+
+  [[ ! -d "${LP_USERNAME_FILE%/*}" ]] && mkdir -p "${LP_USERNAME_FILE%/*}"
+  echo "$email" > "$LP_USERNAME_FILE"
+  echo "Saved $email to $LP_USERNAME_FILE"
+}
+
+cmd_exists fzf    || die "You don't have fzf installed!"
+cmd_exists lpass  || die "You don't have lpass installed!"
+cmd_exists pbcopy || die "Uh oh! No pbcopy!"
+[[ ! -r "$LP_USERNAME_FILE" ]] && set_email
+
+lpass show you_dont_bring_me_flowers_you_dont_sing_me_love_songs 2>&1 | grep -q 'lpass login' && lpass login --trust $(cat "$LP_USERNAME_FILE")
+
+while out=$(
+  lpass ls --color=always |
+  fzf --ansi --no-sort --reverse --query="$q" \
+      --prompt="Select [id:...]: view:<enter>, cp u:^o, quit:^c, cp p:^p: $msg" \
+      --print-query \
+      --expect=ctrl-o,ctrl-p \
+      --toggle-sort=\`); do
+
+  q=$(head -1 <<< "$out")
+  k=$(head -2 <<< "$out" | tail -1)
+  id="$(sed '1,2d;s/^[^a-z0-9]*//;/^$/d' <<< "$out" | egrep -o '\[id: [0-9]+\]' | egrep -o '[0-9]+')"
+
+  if [[ -z "$id" ]]; then
+    msg='[ID WAS EMPTY] '
+  else
+    case "$k" in
+      ctrl-o)
+        pbcopy <<< "$(lpass show --username "$id")"
+        msg="[COPIED USERNAME] "
+        ;;
+      ctrl-p)
+        pbcopy <<< "$(lpass show --password "$id")"
+        msg="[COPIED PASSWORD] "
+        ;;
+      *)
+        lpass show --color=always --all "$id" | less -Rc
+        msg=""
+        ;;
+    esac
+  fi
+done
