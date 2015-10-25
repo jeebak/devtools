@@ -29,4 +29,11 @@ $conf = array(
 $conf['environment_indicator_overwrite'] = TRUE;
 
 // Clearly show we're on on local dev environment.
-$conf['environment_indicator_overwritten_name'] = 'LOCAL DEV';
+$conf['environment_indicator_overwritten_name'] = '*** LOCAL DEV ***';
+
+// Valid css colors for the text and background of the admin toolbar and environment indicator.
+$conf['environment_indicator_overwritten_color'] = '#9f3dad';
+$conf['environment_indicator_overwritten_text_color'] = '#ffffff'; // Doesn't seem to do anything
+
+// A boolean value indicating whether the Environment Indicator should be visible at all times, fixed at the top/bottom of the screen.
+$conf['environment_indicator_overwritten_fixed'] = TRUE;
