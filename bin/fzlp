@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Insprired by: http://junegunn.kr/2015/03/browsing-git-commits-with-fzf/
+#
 # FuZzy LastPass (using fzf)
 
 export LPASS_AGENT_TIMEOUT=0
