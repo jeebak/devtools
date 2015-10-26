@@ -23,4 +23,22 @@ function fzf-src () {
 zle -N fzf-src
 bindkey '\es' fzf-src
 
+# Inspired by fzf docs
+fzf-edit-file() {
+  local out
+
+  echo "Gathering list..."
+  out="$(
+    (git ls-tree -r --name-only HEAD || find . -type f) 2> /dev/null |
+    fzf --tiebreak=index
+  )"
+
+  [[ -n "$out" ]] && LBUFFER="${EDITOR:-vim} \"$out\""
+  zle redisplay
+}
+
+zle     -N   fzf-edit-file
+bindkey '^o' fzf-edit-file
+bindkey '\eo' fzf-edit-file
+
 # vim: set ft=zsh:
