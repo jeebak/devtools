@@ -692,7 +692,7 @@ function accpl.addme() {
   fi
 
   username="$(accpl.__get_my_${CMS}_username)"
-  email="$(git config --get user.email || accpl.__get_my_${CMS}_email_address)"
+  email="$(accpl.__get_my_${CMS}_email_address)"
   password="$(accpl.__get_my_${CMS}_passwd)"
 
   if accpl.__is_drupal; then
