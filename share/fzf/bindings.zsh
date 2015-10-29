@@ -1,3 +1,8 @@
+# Keybindings to trigger scripts.
+# Attempt to restore cmdline. Not perfect but OK for now :/.
+bindkey -s '\em' " ^ufzlp\n^y"
+bindkey -s '\eq' " ^ufzgit\n^y"
+
 # Based on: http://weblog.bulknews.net/post/89635306479/ghq-peco-percol
 #      and: https://gist.github.com/junegunn/f4fca918e937e6bf5bad
 function fzf-src () {
