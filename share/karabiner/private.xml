@@ -125,10 +125,21 @@
       </autogen>
     </item>
 
+    <!-- Originally double-tap left shift, but conflicted with tap shift -->
     <item>
-      <name>Double-tap Left Shift for CapsLock</name>
-      <identifier>com.jasonrudolph.double_lshift_to_caps</identifier>
-      <autogen>__DoublePressModifier__ KeyCode::SHIFT_L, KeyCode::SHIFT_L, KeyCode::CAPSLOCK</autogen>
+      <name>Double-tap Left Command for CapsLock</name>
+      <identifier>com.jasonrudolph.double_lcommand_to_caps</identifier>
+      <autogen>__DoublePressModifier__ KeyCode::COMMAND_L, KeyCode::COMMAND_L, KeyCode::CAPSLOCK</autogen>
+    </item>
+
+    <!-- https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/ -->
+    <item>
+      <name>Tap shift to move over words</name>
+      <appendix>Shift keys move the cursor one word forward or backward when pressed alone. When used with other keys they act as normal shifts.</appendix>
+      <identifier>private.shifts_to_forward_backward_word</identifier>
+
+      <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::CURSOR_RIGHT, ModifierFlag::OPTION_L</autogen>
+      <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_L, ModifierFlag::SHIFT_L | ModifierFlag::NONE, KeyCode::SHIFT_L, KeyCode::CURSOR_LEFT, ModifierFlag::OPTION_L</autogen>
     </item>
   </item>
 
