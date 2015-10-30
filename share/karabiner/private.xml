@@ -59,8 +59,23 @@
         KeyCode::CURSOR_RIGHT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
       </autogen>
 
-      <!-- T: Backtick / Tilde -->
-      <autogen>__KeyToKey__ KeyCode::T, KeyCode::BACKQUOTE</autogen>
+      <!-- T: Backtick / Tilde (shift behavior swapped) -->
+      <!-- https://github.com/iansinnott/dotfiles/blob/master/dotfiles/KeyRemap4MacBook/private.xml -->
+      <autogen>
+        --KeyToKey--
+        KeyCode::T, ModifierFlag::SHIFT_L,
+        KeyCode::BACKQUOTE
+      </autogen>
+      <autogen>
+        --KeyToKey--
+        KeyCode::T, ModifierFlag::SHIFT_R,
+        KeyCode::BACKQUOTE
+      </autogen>
+      <autogen>
+        --KeyToKey--
+        KeyCode::T,
+        KeyCode::BACKQUOTE, ModifierFlag::SHIFT_L
+      </autogen>
 
       <!--
       <autogen>__KeyToKey__ KeyCode::Q, ...     </autogen>
