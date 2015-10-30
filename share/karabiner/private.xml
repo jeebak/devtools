@@ -149,6 +149,26 @@
       <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::CURSOR_RIGHT, ModifierFlag::OPTION_L</autogen>
       <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_L, ModifierFlag::SHIFT_L | ModifierFlag::NONE, KeyCode::SHIFT_L, KeyCode::CURSOR_LEFT, ModifierFlag::OPTION_L</autogen>
     </item>
+
+    <!-- https://bitbucket.org/sjl/dotfiles/src/1da770d23a2168f0e0c2e50d0d3e84e5c6d38d27/keyremap4macbook/private.xml -->
+    <item>
+      <name>Remap Held Tab to Hyper</name>
+      <appendix>OS X doesn't have a Hyper. This maps Held Tab to Control + Shift + Option + Command.</appendix>
+      <appendix>You can use this key in your own custom keyboard shortcuts you create in apps.</appendix>
+
+      <identifier>space_cadet.held_tab_to_hyper</identifier>
+
+      <autogen>
+        --KeyOverlaidModifier--
+        KeyCode::TAB,
+        ModifierFlag::NONE,
+
+        KeyCode::COMMAND_L,
+        ModifierFlag::OPTION_L | ModifierFlag::SHIFT_L | ModifierFlag::CONTROL_L,
+
+        KeyCode::TAB
+      </autogen>
+    </item>
   </item>
 
 </root>
