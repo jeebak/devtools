@@ -1,0 +1,135 @@
+<?xml version="1.0"?>
+<root>
+
+  <item>
+    <!-- Compare to: touchcursor.xml -->
+    <name>MyTouchCursor</name>
+
+    <item>
+      <name>MyTouchCursor: http://touchcursor.sourceforge.net/</name>
+      <identifier vk_config="true">notsave.mytouchcursor</identifier>
+
+      <!--
+      NOTES:
+        - Use: EventViewer to help create new mappings.
+        - Order seems to matter
+        - Shifted KeyCode:
+          __KeyToKey__ KeyCode::D, MODIFIERFLAG_EITHER_LEFT_OR_RIGHT_SHIFT,
+      -->
+
+      <!-- A: Option/Alt (pleasant surprise that this worked! -->
+      <autogen>__KeyToKey__ KeyCode::A, KeyCode::OPTION_L</autogen>
+
+      <!-- IKJL -->
+      <autogen>__KeyToKey__ KeyCode::I, KeyCode::CURSOR_UP</autogen>
+      <autogen>__KeyToKey__ KeyCode::K, KeyCode::CURSOR_DOWN</autogen>
+      <autogen>__KeyToKey__ KeyCode::J, KeyCode::CURSOR_LEFT</autogen>
+      <autogen>__KeyToKey__ KeyCode::L, KeyCode::CURSOR_RIGHT</autogen>
+       
+      <!-- U: home -->
+      <autogen>__KeyToKey__ KeyCode::U, KeyCode::HOME</autogen>
+      <!-- O: end -->
+      <autogen>__KeyToKey__ KeyCode::O, KeyCode::END</autogen>
+
+      <!-- P: delete -->
+      <autogen>__KeyToKey__ KeyCode::P, KeyCode::DELETE</autogen>
+      <!-- M: forward delete -->
+      <autogen>__KeyToKey__ KeyCode::M, KeyCode::FORWARD_DELETE</autogen>
+
+      <!-- H: page up -->
+      <autogen>__KeyToKey__ KeyCode::H, KeyCode::PAGEUP</autogen>
+      <!-- N: page down -->
+      <autogen>__KeyToKey__ KeyCode::N, KeyCode::PAGEDOWN</autogen>
+
+      <!-- Mapping 2 per, to allow for one-handed operation -->
+
+      <!-- S, and ',' keys for repeatable spaces -->
+      <autogen>__KeyToKey__ KeyCode::S, KeyCode::SPACE</autogen>
+      <autogen>__KeyToKey__ KeyCode::COMMA, KeyCode::SPACE</autogen>
+
+      <!-- W: Delete from cursor to beginning of line -->
+      <autogen>
+        __KeyToKey__ KeyCode::W,
+        KeyCode::CURSOR_LEFT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
+      </autogen>
+
+      <!-- D: Delete from cursor to end of line -->
+      <autogen>
+        __KeyToKey__ KeyCode::D,
+        KeyCode::CURSOR_RIGHT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
+      </autogen>
+
+      <!-- T: Backtick / Tilde -->
+      <autogen>__KeyToKey__ KeyCode::T, KeyCode::BACKQUOTE</autogen>
+
+      <!--
+      <autogen>__KeyToKey__ KeyCode::Q, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::E, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::R, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::F, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::G, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::Z, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::X, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::C, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::V, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::G, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::B, ...     </autogen>
+
+      <autogen>__KeyToKey__ KeyCode::Y, ...     </autogen>
+      <autogen>__KeyToKey__ KeyCode::COLON, ... </autogen>
+      <autogen>__KeyToKey__ KeyCode::QUOTE, ... </autogen>
+      <autogen>__KeyToKey__ KeyCode::COMMA, ... </autogen>
+      <autogen>__KeyToKey__ KeyCode::DOT, ...   </autogen>
+      <autogen>__KeyToKey__ KeyCode::SLASH, ... </autogen>
+      -->
+    </item>
+
+    <item>
+      <name>Activate MyTouchCursor by Space</name>
+      <appendix>(Please adjust "[Key Overlaid Modifier] Initial Modifier Wait" in Key Repeat tab</appendix>
+      <appendix>in order to avoid mis-detection of space key if your typing speed is fast.)</appendix>
+      <identifier>remap.mytouchcursor</identifier>
+      <autogen>
+        __KeyOverlaidModifier__
+        KeyCode::SPACE,
+        KeyCode::VK_CONFIG_SYNC_KEYDOWNUP_notsave_mytouchcursor,
+        KeyCode::SPACE
+      </autogen>
+
+      <block>
+        <config_only>notsave.mytouchcursor</config_only>
+        <autogen>__BlockUntilKeyUp__ KeyCode::SPACE</autogen>
+      </block>
+    </item>
+
+  </item>
+
+  <item>
+    <name>External Extras</name>
+
+    <!-- https://github.com/jasonrudolph/keyboard -->
+    <item>
+      <!--
+        Inspired by and adapted from Steve Losh's "Modern Space Cadet" post:
+        http://stevelosh.com/blog/2012/10/a-modern-space-cadet/#controlescape
+      -->
+      <name>F19 to Escape/Control</name>
+      <appendix>Tap F19 for Escape; Hold F19 for Control</appendix>
+      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19.)</appendix>
+      <identifier>com.jasonrudolph.f192f19_escape_or_control</identifier>
+      <autogen>
+        --KeyOverlaidModifier--
+        KeyCode::F19,
+        KeyCode::CONTROL_L,
+        KeyCode::ESCAPE
+      </autogen>
+    </item>
+
+    <item>
+      <name>Double-tap Left Shift for CapsLock</name>
+      <identifier>com.jasonrudolph.double_lshift_to_caps</identifier>
+      <autogen>__DoublePressModifier__ KeyCode::SHIFT_L, KeyCode::SHIFT_L, KeyCode::CAPSLOCK</autogen>
+    </item>
+  </item>
+
+</root>
