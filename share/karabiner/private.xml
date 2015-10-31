@@ -42,8 +42,8 @@
       <autogen>__KeyToKey__ KeyCode::A, KeyCode::OPTION_L</autogen>
       <!-- E: Shift -->
       <autogen>__KeyToKey__ KeyCode::E, KeyCode::SHIFT_L</autogen>
-      <!-- R: Control -->
-      <autogen>__KeyToKey__ KeyCode::R, KeyCode::CONTROL_L</autogen>
+      <!-- R: Command -->
+      <autogen>__KeyToKey__ KeyCode::R, KeyCode::COMMAND_L</autogen>
       <!-- S: Space (repeatable) -->
       <autogen>__KeyToKey__ KeyCode::S, KeyCode::SPACE</autogen>
 
