@@ -6,7 +6,7 @@
     <name>MyTouchCursor</name>
 
     <item>
-      <name>MyTouchCursor: http://touchcursor.sourceforge.net/</name>
+      <name>MyTouchCursor, based on: http://touchcursor.sourceforge.net/</name>
       <identifier vk_config="true">notsave.mytouchcursor</identifier>
 
       <!--
@@ -60,9 +60,6 @@
       <autogen>__KeyToKey__ KeyCode::G, KeyCode::G, ModifierFlag::COMMAND_L</autogen>
       <autogen>__KeyToKey__ KeyCode::Y, KeyCode::Y, ModifierFlag::COMMAND_L</autogen>
 
-      <!-- /: Command-/ -->
-      <autogen>__KeyToKey__ KeyCode::SLASH, KeyCode::SLASH, ModifierFlag::COMMAND_L </autogen>
-
       <!-- W: Delete from cursor to beginning of line -->
       <autogen>
         __KeyToKey__ KeyCode::W,
@@ -92,6 +89,9 @@
       <autogen>__KeyToKey__ KeyCode::COMMA, ... </autogen>
       <autogen>__KeyToKey__ KeyCode::DOT, ...   </autogen>
       -->
+
+      <!-- /: Command-/ (Undocumented :) -->
+      <autogen>__KeyToKey__ KeyCode::SLASH, KeyCode::SLASH, ModifierFlag::COMMAND_L </autogen>
     </item>
 
     <item>
@@ -99,15 +99,15 @@
       <appendix>(Please adjust "[Key Overlaid Modifier] Initial Modifier Wait" in Key Repeat tab</appendix>
       <appendix>in order to avoid mis-detection of space key if your typing speed is fast.)</appendix>
       <appendix>───────────────────────────────────────</appendix>
-      <appendix>In addition to the: IKJL (Up, Down, Left, Right,) UO (Home, End,)</appendix>
-      <appendix>PM (Backspace, Delete,) HN (PgUp, PgDn) standard touchcursor mappings ...</appendix>
+      <appendix>TouchCursor: IKJL (↑, ↓, ←, →) UO (Home, End) PM (BS, Delete) HN (PgUp, PgDn)</appendix>
       <appendix>───────────────────────────────────────</appendix>
-      <appendix>A: Option/Alt, E: Shift, R: Control, S: Space (repeatable)</appendix>
+      <appendix>MyTouchCursor: AERS (⌥, ⇧, ⌘, [Repeatable] Spacebar) (Caps Lock can be: ⌃)</appendix>
+      <appendix>NOTE: These can be useful in conjunction with arrow keys, or mouse click actions</appendix>
       <appendix>W: Delete from cursor to beginning of line, D: Delete from cursor to end of line</appendix>
       <appendix>───────────────────────────────────────</appendix>
-      <appendix>ZXCV: Command-[ZXCV] (Undo, Cut, Copy, Paste)</appendix>
-      <appendix>QFGY: Command-[AFGY] (Select All, Find, Find Again, Redo)</appendix>
-      <appendix>NOTE: using Q for Select All, as A for Option/All is used more</appendix>
+      <appendix>QFGY: ⌘-[qfgy] (Select All, Find, Find Again, Redo)</appendix>
+      <appendix>NOTE: Using 'q' for Select All, as 'a' is used for ⌥ </appendix>
+      <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste)</appendix>
 
       <identifier>remap.mytouchcursor</identifier>
       <autogen>
@@ -148,7 +148,7 @@
 
     <!-- Originally double-tap left shift, but conflicted with tap shift -->
     <item>
-      <name>Double-tap Left Command for CapsLock</name>
+      <name>Double-tap Left ⌘ for CapsLock</name>
       <identifier>com.jasonrudolph.double_lcommand_to_caps</identifier>
       <autogen>__DoublePressModifier__ KeyCode::COMMAND_L, KeyCode::COMMAND_L, KeyCode::CAPSLOCK</autogen>
     </item>
@@ -205,7 +205,7 @@
 
     <item>
       <name>Remap Held Tab to Hyper</name>
-      <appendix>OS X doesn't have a Hyper. This maps Held Tab to Control + Shift + Option + Command.</appendix>
+      <appendix>OS X doesn't have a Hyper. This maps Held Tab to ⌃ + ⇧ + ⌥ + ⌘.</appendix>
       <appendix>You can use this key in your own custom keyboard shortcuts you create in apps.</appendix>
 
       <identifier>space_cadet.held_tab_to_hyper</identifier>
