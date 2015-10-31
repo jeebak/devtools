@@ -98,6 +98,17 @@
       <name>Activate MyTouchCursor by Space</name>
       <appendix>(Please adjust "[Key Overlaid Modifier] Initial Modifier Wait" in Key Repeat tab</appendix>
       <appendix>in order to avoid mis-detection of space key if your typing speed is fast.)</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>In addition to the: IKJL (Up, Down, Left, Right,) UO (Home, End,)</appendix>
+      <appendix>PM (Backspace, Delete,) HN (PgUp, PgDn) standard touchcursor mappings ...</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>A: Option/Alt, E: Shift, R: Control, S: Space (repeatable)</appendix>
+      <appendix>W: Delete from cursor to beginning of line, D: Delete from cursor to end of line</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>ZXCV: Command-[ZXCV] (Undo, Cut, Copy, Paste)</appendix>
+      <appendix>QFGY: Command-[AFGY] (Select All, Find, Find Again, Redo)</appendix>
+      <appendix>NOTE: using Q for Select All, as A for Option/All is used more</appendix>
+
       <identifier>remap.mytouchcursor</identifier>
       <autogen>
         __KeyOverlaidModifier__
