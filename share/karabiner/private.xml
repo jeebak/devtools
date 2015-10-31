@@ -17,9 +17,6 @@
           __KeyToKey__ KeyCode::D, MODIFIERFLAG_EITHER_LEFT_OR_RIGHT_SHIFT,
       -->
 
-      <!-- A: Option/Alt (pleasant surprise that this worked! -->
-      <autogen>__KeyToKey__ KeyCode::A, KeyCode::OPTION_L</autogen>
-
       <!-- IKJL -->
       <autogen>__KeyToKey__ KeyCode::I, KeyCode::CURSOR_UP</autogen>
       <autogen>__KeyToKey__ KeyCode::K, KeyCode::CURSOR_DOWN</autogen>
@@ -41,18 +38,36 @@
       <!-- N: page down -->
       <autogen>__KeyToKey__ KeyCode::N, KeyCode::PAGEDOWN</autogen>
 
-      <!-- Mapping 2 per, to allow for one-handed operation -->
-
-      <!-- S, and ',' keys for repeatable spaces -->
+      <!-- A: Option/Alt (pleasant surprise that this worked! -->
+      <autogen>__KeyToKey__ KeyCode::A, KeyCode::OPTION_L</autogen>
+      <!-- E: Shift -->
+      <autogen>__KeyToKey__ KeyCode::E, KeyCode::SHIFT_L</autogen>
+      <!-- R: Control -->
+      <autogen>__KeyToKey__ KeyCode::R, KeyCode::CONTROL_L</autogen>
+      <!-- S: Space (repeatable) -->
       <autogen>__KeyToKey__ KeyCode::S, KeyCode::SPACE</autogen>
-      <autogen>__KeyToKey__ KeyCode::COMMA, KeyCode::SPACE</autogen>
+
+      <!-- ZXCV: Command ZXCV (Undo, Cut, Copy, Paste) -->
+      <autogen>__KeyToKey__ KeyCode::Z, KeyCode::Z, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::X, KeyCode::X, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::C, KeyCode::C, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::V, KeyCode::V, ModifierFlag::COMMAND_L</autogen>
+
+      <!-- QFGY: Command AFGY (Select All, Find, Find Again, Redo) -->
+      <!-- NOTE: using Q for Select All, as A for Option/All is used more -->
+      <autogen>__KeyToKey__ KeyCode::Q, KeyCode::A, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::F, KeyCode::F, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::G, KeyCode::G, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::Y, KeyCode::Y, ModifierFlag::COMMAND_L</autogen>
+
+      <!-- /: Command-/ -->
+      <autogen>__KeyToKey__ KeyCode::SLASH, KeyCode::SLASH, ModifierFlag::COMMAND_L </autogen>
 
       <!-- W: Delete from cursor to beginning of line -->
       <autogen>
         __KeyToKey__ KeyCode::W,
         KeyCode::CURSOR_LEFT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
       </autogen>
-
       <!-- D: Delete from cursor to end of line -->
       <autogen>
         __KeyToKey__ KeyCode::D,
@@ -72,23 +87,10 @@
       </autogen>
 
       <!--
-      <autogen>__KeyToKey__ KeyCode::Q, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::E, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::R, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::F, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::G, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::Z, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::X, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::C, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::V, ...     </autogen>
-      <autogen>__KeyToKey__ KeyCode::G, ...     </autogen>
-
-      <autogen>__KeyToKey__ KeyCode::Y, ...     </autogen>
       <autogen>__KeyToKey__ KeyCode::COLON, ... </autogen>
       <autogen>__KeyToKey__ KeyCode::QUOTE, ... </autogen>
       <autogen>__KeyToKey__ KeyCode::COMMA, ... </autogen>
       <autogen>__KeyToKey__ KeyCode::DOT, ...   </autogen>
-      <autogen>__KeyToKey__ KeyCode::SLASH, ... </autogen>
       -->
     </item>
 
