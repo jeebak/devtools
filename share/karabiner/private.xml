@@ -61,7 +61,7 @@
       <autogen>__KeyToKey__ KeyCode::V, KeyCode::V, ModifierFlag::COMMAND_L</autogen>
 
       <!-- [TAB]: Command TAB -->
-      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
 
       <!-- W: Delete from cursor to beginning of line -->
       <autogen>
@@ -110,7 +110,7 @@
       <appendix>───────────────────────────────────────</appendix>
       <appendix>QFGY: ⌘-[qfgy] (Select All, Find, Find Again, Redo)</appendix>
       <appendix>NOTE: Using 'q' for Select All, as 'a' is used for ⌥ </appendix>
-      <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste) - [TAB]: ⌘-⇥</appendix>
+      <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste) - [TAB]: ⌥-⇥</appendix>
 
       <identifier>remap.mytouchcursor</identifier>
       <autogen>
