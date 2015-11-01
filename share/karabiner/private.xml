@@ -171,7 +171,7 @@
       https://bitbucket.org/sjl/dotfiles/src/1da770d23a2168f0e0c2e50d0d3e84e5c6d38d27/keyremap4macbook/private.xml
     -->
     <item>
-        <name>Force yourself to use the correct shift keys.</name>
+        <name>Force yourself to use the correct shift keys. [will interfere with Held Tab to Hyper]</name>
         <identifier>space_cadet.force_correct_shifts</identifier>
 
         <autogen>--KeyToKey-- KeyCode::Q, ModifierFlag::SHIFT_L, KeyCode::VK_NONE</autogen>
@@ -229,7 +229,7 @@
     </item>
 
     <item>
-      <name>Remap Held Tab to Hyper</name>
+      <name>Remap Held Tab to Hyper [diable force correct shift keys to use]</name>
       <appendix>OS X doesn't have a Hyper. This maps Held Tab to ⌃ + ⇧ + ⌥ + ⌘.</appendix>
       <appendix>You can use this key in your own custom keyboard shortcuts you create in apps.</appendix>
 
