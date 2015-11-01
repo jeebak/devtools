@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<root>
+
+  <item>
+    <!--
+      Compare to: /Applications/Karabiner.app/Contents/Resources/include/checkbox/touchcursor.xml
+    -->
+    <name>My TouchCursor</name>
+
+    <item>
+      <name>MyTouchCursor, based on: http://touchcursor.sourceforge.net/</name>
+      <identifier vk_config="true">notsave.mytouchcursor</identifier>
+
+      <!--
+      NOTES:
+        - Use: EventViewer to help create new mappings.
+        - Order seems to matter
+        - Shifted KeyCode:
+          __KeyToKey__ KeyCode::D, MODIFIERFLAG_EITHER_LEFT_OR_RIGHT_SHIFT,
+      -->
+
+      <!-- IKJL -->
+      <autogen>__KeyToKey__ KeyCode::I, KeyCode::CURSOR_UP</autogen>
+      <autogen>__KeyToKey__ KeyCode::K, KeyCode::CURSOR_DOWN</autogen>
+      <autogen>__KeyToKey__ KeyCode::J, KeyCode::CURSOR_LEFT</autogen>
+      <autogen>__KeyToKey__ KeyCode::L, KeyCode::CURSOR_RIGHT</autogen>
+       
+      <!-- U: home -->
+      <autogen>__KeyToKey__ KeyCode::U, KeyCode::HOME</autogen>
+      <!-- O: end -->
+      <autogen>__KeyToKey__ KeyCode::O, KeyCode::END</autogen>
+
+      <!-- P: delete -->
+      <autogen>__KeyToKey__ KeyCode::P, KeyCode::DELETE</autogen>
+      <!-- M: forward delete -->
+      <autogen>__KeyToKey__ KeyCode::M, KeyCode::FORWARD_DELETE</autogen>
+
+      <!-- H: page up -->
+      <autogen>__KeyToKey__ KeyCode::H, KeyCode::PAGEUP</autogen>
+      <!-- N: page down -->
+      <autogen>__KeyToKey__ KeyCode::N, KeyCode::PAGEDOWN</autogen>
+
+      <!-- A: Option/Alt (pleasant surprise that this worked! -->
+      <autogen>__KeyToKey__ KeyCode::A, KeyCode::OPTION_L</autogen>
+      <!-- E: Shift -->
+      <autogen>__KeyToKey__ KeyCode::E, KeyCode::SHIFT_L</autogen>
+      <!-- R: Command -->
+      <autogen>__KeyToKey__ KeyCode::R, KeyCode::COMMAND_L</autogen>
+      <!-- S: Space (repeatable) -->
+      <autogen>__KeyToKey__ KeyCode::S, KeyCode::SPACE</autogen>
+
+      <!-- QFGY: Command AFGY (Select All, Find, Find Again, Redo) -->
+      <!-- NOTE: using Q for Select All, as A for Option/All is used more -->
+      <autogen>__KeyToKey__ KeyCode::Q, KeyCode::A, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::F, KeyCode::F, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::G, KeyCode::G, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::Y, KeyCode::Y, ModifierFlag::COMMAND_L</autogen>
+
+      <!-- ZXCV: Command ZXCV (Undo, Cut, Copy, Paste) -->
+      <autogen>__KeyToKey__ KeyCode::Z, KeyCode::Z, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::X, KeyCode::X, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::C, KeyCode::C, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::V, KeyCode::V, ModifierFlag::COMMAND_L</autogen>
+
+      <!-- [TAB]: Command TAB -->
+      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
+
+      <!-- W: Delete from cursor to beginning of line -->
+      <autogen>
+        __KeyToKey__ KeyCode::W,
+        KeyCode::CURSOR_LEFT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
+      </autogen>
+      <!-- D: Delete from cursor to end of line -->
+      <autogen>
+        __KeyToKey__ KeyCode::D,
+        KeyCode::CURSOR_RIGHT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
+      </autogen>
+
+      <!-- T: Tilde / B: Backtick  -->
+      <autogen>
+        --KeyToKey--
+        KeyCode::T,
+        KeyCode::BACKQUOTE, ModifierFlag::SHIFT_L
+      </autogen>
+      <autogen>
+        --KeyToKey--
+        KeyCode::B,
+        KeyCode::BACKQUOTE
+      </autogen>
+
+      <!--
+      <autogen>__KeyToKey__ KeyCode::COLON, ... </autogen>
+      <autogen>__KeyToKey__ KeyCode::QUOTE, ... </autogen>
+      <autogen>__KeyToKey__ KeyCode::COMMA, ... </autogen>
+      <autogen>__KeyToKey__ KeyCode::DOT, ...   </autogen>
+      -->
+
+      <!-- /: Command-/ (Undocumented :) -->
+      <autogen>__KeyToKey__ KeyCode::SLASH, KeyCode::SLASH, ModifierFlag::COMMAND_L </autogen>
+    </item>
+
+    <item>
+      <name>Activate MyTouchCursor by Space</name>
+      <appendix>(Please adjust "[Key Overlaid Modifier] Initial Modifier Wait" in Key Repeat tab</appendix>
+      <appendix>in order to avoid mis-detection of space key if your typing speed is fast.)</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>TouchCursor: IKJL (↑, ↓, ←, →) UO (Home, End) PM (BS, Delete) HN (PgUp, PgDn)</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>MyTouchCursor: AERS (⌥, ⇧, ⌘, [Repeatable] Spacebar) (Caps Lock can be: ⌃)</appendix>
+      <appendix>NOTE: These can be useful in conjunction with arrow keys, or mouse click actions</appendix>
+      <appendix>W: Delete from cursor to beginning of line, D: Delete from cursor to end of line</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>QFGY: ⌘-[qfgy] (Select All, Find, Find Again, Redo)</appendix>
+      <appendix>NOTE: Using 'q' for Select All, as 'a' is used for ⌥ </appendix>
+      <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste) - [TAB]: ⌥-⇥</appendix>
+
+      <identifier>remap.mytouchcursor</identifier>
+      <autogen>
+        __KeyOverlaidModifier__
+        KeyCode::SPACE,
+        KeyCode::VK_CONFIG_SYNC_KEYDOWNUP_notsave_mytouchcursor,
+        KeyCode::SPACE
+      </autogen>
+
+      <block>
+        <config_only>notsave.mytouchcursor</config_only>
+        <autogen>__BlockUntilKeyUp__ KeyCode::SPACE</autogen>
+      </block>
+    </item>
+
+  </item>
+
+</root>
