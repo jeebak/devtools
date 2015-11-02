@@ -934,6 +934,9 @@ function accpl.fp() {
 
   for i in ${writable[*]}; do
     if [[ -d "$files_root/$i" ]] || [[ -f "$files_root/$i" ]]; then
+      # Quick hack, to allow for symlinked folders. Find and chown have -L
+      # option on OSX and Linux, but chmod does not under Linux.
+      [[ -d "$files_root/$i" ]] && i="$i/"
       # For "prod" use:   sudo chgrp -R $apache_group "$files_root/$i"
       accpl.__verbose_run sudo chown -R "$USER:$apache_group" "$files_root/$i"
       accpl.__verbose_run sudo chmod -R $chmod_options ug+rw "$files_root/$i" 2> /dev/null | grep -v "’ retained as "
