@@ -65,11 +65,11 @@ while out=$(
     case "$k" in
       ctrl-o)
         pbcopy <<< "$(lpass show --username "$id")"
-        msg="[COPIED USERNAME] "
+        msg="[COPIED USERNAME, id: $id] "
         ;;
       ctrl-p)
         pbcopy <<< "$(lpass show --password "$id")"
-        msg="[COPIED PASSWORD] "
+        msg="[COPIED PASSWORD, id: $id] "
         ;;
       *)
         lpass show --color=always --all "$id" | less -Rc
