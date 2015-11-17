@@ -849,7 +849,12 @@ function accpl.fp() {
   # Apache confs have "Group" but Ubuntu uses env vars, so for now use...
   accpl.__is_mac && apache_group=_www || apache_group=www-data
 
-  if accpl.__is_concrete5; then
+  if [[ $# -gt 0 ]]; then
+    files_root="."
+    writable=(
+      "$@"
+    )
+  elif accpl.__is_concrete5; then
     files_root="$(accpl.__get_concrete5_root)"
     # This list accomodates both version 5.6 and 5.7
     writable=(
