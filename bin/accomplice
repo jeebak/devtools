@@ -307,6 +307,14 @@ function accpl.__is_joomla() {
   fi
 }
 
+function accpl.__is_symfony() {
+  if accpl.__is_git_repo; then
+    accpl.__git_ls_grep app/SymfonyRequirements.php > /dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
 function accpl.__is_wordpress() {
   if accpl.__is_git_repo; then
     accpl.__git_ls_grep wp-admin/index.php > /dev/null 2>&1
@@ -448,6 +456,22 @@ function accpl.__get_joomla_root() {
   fi
 
   echo "$git_root/$joomla_root"
+}
+
+function accpl.__get_symfony_root() {
+  local git_root is_symfony symfony_root
+
+  git_root="$(accpl.__get_git_root)"
+  if [[ ! -z "$git_root" ]]; then
+    # Symfony seems to have this path to this file:
+    is_symfony="$(accpl.__git_ls_grep app/SymfonyRequirements.php)"
+    if [[ ! -z "$is_symfony" ]]; then
+      # Strip away: app/SymfonyRequirements.php and we'll have our: symfony_root
+      symfony_root="${is_symfony/app\/SymfonyRequirements.php/}"
+    fi
+  fi
+
+  echo "$git_root/$symfony_root"
 }
 
 function accpl.__get_wordpress_creds() {
@@ -905,6 +929,12 @@ function accpl.fp() {
       'plugins/user'
       'templates'
       'tmp'
+    )
+  elif accpl.__is_symfony; then
+    files_root="$(accpl.__get_symfony_root)"
+    writable=(
+      'app/cache'
+      'app/logs'
     )
   elif accpl.__is_wordpress; then
     files_root="$(accpl.__get_wordpress_root)"
