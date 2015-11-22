@@ -307,6 +307,14 @@ function accpl.__is_joomla() {
   fi
 }
 
+function accpl.__is_laravel() {
+  if accpl.__is_git_repo; then
+    accpl.__git_ls_grep 'artisan$' > /dev/null 2>&1
+  else
+    return 1
+  fi
+}
+
 function accpl.__is_symfony() {
   if accpl.__is_git_repo; then
     accpl.__git_ls_grep app/SymfonyRequirements.php > /dev/null 2>&1
@@ -456,6 +464,22 @@ function accpl.__get_joomla_root() {
   fi
 
   echo "$git_root/$joomla_root"
+}
+
+function accpl.__get_laravel_root() {
+  local git_root is_laravel laravel_root
+
+  git_root="$(accpl.__get_git_root)"
+  if [[ ! -z "$git_root" ]]; then
+    # Look for artisan in repo
+    is_laravel="$(accpl.__git_ls_grep 'artisan$')"
+    if [[ ! -z "$is_laravel" ]]; then
+      # Strip away: artisan and we'll have our: laravel_root
+      laravel_root="${is_laravel/artisan/}"
+    fi
+  fi
+
+  echo "$git_root/$laravel_root"
 }
 
 function accpl.__get_symfony_root() {
@@ -929,6 +953,13 @@ function accpl.fp() {
       'plugins/user'
       'templates'
       'tmp'
+    )
+  elif accpl.__is_laravel; then
+    files_root="$(accpl.__get_laravel_root)"
+    writable=(
+      'bootstrap/cache'
+      'public/uploads'
+      'storage'
     )
   elif accpl.__is_symfony; then
     files_root="$(accpl.__get_symfony_root)"
