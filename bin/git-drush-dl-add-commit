@@ -2,8 +2,10 @@
 
 [[ $# -eq 0 ]] && echo "usage: git drush-dl-add-commit modulename [module2...]" && exit 1
 
+PLUGIN_D="$(dirname "${BASH_SOURCE[0]}")"
+
 for i in "$@"; do
-  output="$(drush dl "$i" 2>&1 | head -1 | sed 's/ downloaded.*$//')"
+  output="$("$PLUGIN_D/drush" dl "$i" 2>&1 | grep "^Project $i .* downloaded" | sed 's/ downloaded.*$//')"
   module=$(git status -s | grep '?? ' | grep '/'"$i"'/$' | sed 's/?? //')
   git add "$module"
   git commit -m "Add $output"
