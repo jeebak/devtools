@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+[[ ! -x "$HOME/.ghq/github.com/c9/core/server.js" ]] && echo "C9 core NOT found!" && exit 1
+
+# Using nc -z to find a free port, could use netstat or lsof -i
+for port in $(seq 8181 8281); do
+  if ! nc -z localhost "$port"; then
+    break
+  else
+    port=''
+  fi
+done
+
+[[ -z "$port" ]] && echo No Free Ports && exit 1
+
+OPEN=$(which xdg-open)
+[[ -z "$OPEN" ]] && OPEN=$(which open)
+
+host=127.0.0.1
+
+$OPEN http://$host:$port
+# This is a gamble... that the brower will open *after* the server's started.
+
+"$HOME/.ghq/github.com/c9/core/server.js" --port "$port" -w "${1:-.}"
