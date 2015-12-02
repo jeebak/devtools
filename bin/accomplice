@@ -529,7 +529,7 @@ function accpl.__get_wordpress_root() {
     is_wordpress="$(accpl.__git_ls_grep wp-admin/index.php)"
     if [[ ! -z "$is_wordpress" ]]; then
       # Strip away: wp-admin/index.php and we'll have our: wordpress_root
-      wordpress_root="${is_wordpress/\/wp-admin\/index.php/}"
+      wordpress_root="${is_wordpress/wp-admin\/index.php/}"
     fi
   fi
 
