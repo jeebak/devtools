@@ -17,7 +17,7 @@ if [[ ! -z "$git_root" ]]; then
   is_wordpress="$(git ls-tree -r "$git_head" --name-only --full-tree | grep wp-admin/index.php)"
   if [[ ! -z "$is_wordpress" ]] && [[ $(wc -l <<< "$is_wordpress") -eq 1 ]]; then
     # Strip away: wp-admin/index.php and we'll have our: wordpress_root
-    wordpress_root="${is_wordpress/\/wp-admin\/index.php/}"
+    wordpress_root="${is_wordpress/wp-admin\/index.php/}"
     # Set additional option(s) to pass along to wp...
     options=--path="$git_root/$wordpress_root"
   fi
