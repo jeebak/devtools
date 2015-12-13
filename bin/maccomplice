@@ -133,25 +133,30 @@ function accpl.__reload_plist() {
 }
 
 function accpl.ra() {
-  pgrep -f /usr/sbin/httpd 2> /dev/null > /dev/null
-  if [ $? -eq 0 ]; then
-    errcho "Restarting system Apache..."
-    accpl.__verbose_run sudo pkill -9 -f /usr/sbin/httpd
-    accpl.__verbose_run sudo /usr/sbin/apachectl -k start
+  local is_brew is_sys httpd_path apachectl_path message
 
-    errcho "PID(s):"
-    pgrep -f /usr/sbin/httpd
+  httpd_path=/usr/sbin/httpd
+  apachectl_path=/usr/sbin/apachectl
+
+  pgrep -f /usr/sbin/httpd            2> /dev/null > /dev/null && is_sys="true"
+  pgrep -f /usr/local/Cellar/*/httpd  2> /dev/null > /dev/null && is_brew="true"
+
+  if [[ ! -z "$is_sys" ]]; then
+    message="Restarting system Apache..."
+  elif [[ ! -z "$is_brew" ]]; then
+    message="Restarting homebrew Apache..."
+    httpd_path='/usr/local/Cellar/*/httpd'
+    apachectl_path=/usr/local/bin/apachectl
+  else
+    message="Starting system Apache..."
   fi
 
-  pgrep -f /usr/local/Cellar/*/httpd 2> /dev/null > /dev/null
-  if [ $? -eq 0 ]; then
-    errcho "Restarting homebrew Apache..."
-    accpl.__verbose_run sudo pkill -9 -f /usr/local/Cellar/*/httpd
-    accpl.__verbose_run sudo /usr/local/bin/apachectl -k start
+  errcho "$message"
+  accpl.__verbose_run sudo pkill -9 -f "$httpd_path"
+  accpl.__verbose_run sudo "$apachectl_path" -k start
 
-    errcho "PID(s):"
-    pgrep -f /usr/local/Cellar/*/httpd
-  fi
+  errcho "PID(s):"
+  pgrep -f "$httpd_path"
 }
 
 function accpl.rd() {
