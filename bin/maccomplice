@@ -295,7 +295,7 @@ function accpl.buses() {
 function accpl.sphp() {
   # https://raw.githubusercontent.com/conradkleinespel/sphp-osx/master/sphp
   # https://coderwall.com/p/nm_wna
-  local currentversion newversion
+  local currentversion newversion shortOld shortNew
 
   if [ $# -ne 1 ]; then
     errcho "Usage: $accpl_self sphp [phpversion|sys]"
@@ -315,6 +315,9 @@ function accpl.sphp() {
   currentversion="$(php -r "echo str_replace('.', '', substr(phpversion(), 0, 3));")"
   newversion="$1"
 
+  shortOld="$(php -r "echo substr(phpversion(), 0, 1);")"
+  shortNew="$(php -r "echo substr('$1', 0, 1);")"
+
   accpl.__brew list "php${newversion}" 2> /dev/null > /dev/null
 
   if [ $? -eq 0 ]; then
@@ -327,7 +330,11 @@ function accpl.sphp() {
     accpl.__brew link --overwrite "php${newversion}"
 
     errcho "Linking new modphp addon..."
-    accpl.__verbose_run ln -svf "$(brew list "php${newversion}" | grep libphp)" /usr/local/lib/libphp5.so
+    accpl.__verbose_run ln -svf "$(brew list "php${newversion}" | grep libphp)" "/usr/local/lib/libphp${shortNew}.so"
+
+    errcho "Fixing LoadModule..."
+    [[ ! -d "/usr/local/var/run/apache2" ]] && mkdir -p "/usr/local/var/run/apache2"
+    accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "/usr/local/var/run/apache2/php.conf"
 
     errcho "Updating version file..."
 
