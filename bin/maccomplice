@@ -60,6 +60,9 @@ Usage: $accpl_self <subcommand> [options]
     buses     Runs: brew uses --installed, on list of installed brews
     sphp      Switch php versions: $accpl_self sphp [phpversion, like: 53, or sys]
                 (Assumes: brew tap homebrew-php)
+    penmod    Enable:  Brew PHP /usr/local/etc/php/*/conf.d/ext-\$@.conf
+    pdismod   Disable: Brew PHP /usr/local/etc/php/*/conf.d/ext-\$@.conf
+
   Misc.
     cgu       Run: composer global update
 
@@ -351,6 +354,47 @@ function accpl.sphp() {
     errcho "PHP version $newversion was not found."
     exit 1
   fi
+}
+
+function accpl.penmod() {
+  local mod target ini
+
+  for mod in "$@"; do
+    for ini in /etc/homebrew/etc/php/*/conf.d/ext-${mod}.ini; do
+      target="${ini/\/etc\/homebrew/\/usr\/local}"
+
+      if [[ ! -e "$target" ]]; then
+        ln -svf "$ini" "$target"
+      elif [[ "$(readlink "$target")" =~ ^/etc/homebrew/etc/php/ ]]; then
+        errcho "$target is already symlink-ed. Skipping."
+      else
+        errcho "$target is already symlink-ed elsewhere. Skipping"
+      fi
+    done
+  done
+
+  accpl.ra
+}
+
+function accpl.pdismod() {
+  local mod target ini
+
+  for mod in "$@"; do
+    for ini in /usr/local/etc/php/*/conf.d/ext-${mod}.ini; do
+      target="$(readlink "$ini")"
+
+      if [[ -z "$target" ]]; then
+        errcho "$ini is not a symlink. Skipping."
+      elif [[ "$target" =~ ^/etc/homebrew/etc/php/ ]]; then
+        errcho rm -f "$ini"
+        rm -f "$ini"
+      else
+        errcho "$ini is symlink-ed elsewhere. Skipping"
+      fi
+    done
+  done
+
+  accpl.ra
 }
 
 function accpl.cgu() {
