@@ -338,7 +338,7 @@ function accpl.sphp() {
     accpl.__brew link --overwrite "php${newversion}"
 
     errcho "Linking new modphp addon..."
-    accpl.__verbose_run ln -svf "$(brew list "php${newversion}" | grep libphp)" "/usr/local/lib/libphp${shortNew}.so"
+    accpl.__verbose_run ln -svf "/usr/local/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "/usr/local/lib/libphp${shortNew}.so"
 
     errcho "Fixing LoadModule..."
     [[ ! -d "/usr/local/var/run/apache2" ]] && mkdir -p "/usr/local/var/run/apache2"
