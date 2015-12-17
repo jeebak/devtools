@@ -361,7 +361,7 @@ function accpl.penmod() {
 
   for mod in "$@"; do
     for ini in /etc/homebrew/etc/php/*/conf.d/ext-${mod}.ini; do
-      target="${ini/\/etc\/homebrew/\/usr\/local}"
+      target="${ini/\/etc\/homebrew//usr/local}"
 
       if [[ ! -e "$target" ]]; then
         ln -svf "$ini" "$target"
