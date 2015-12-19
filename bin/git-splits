@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+# Based on: https://github.com/ajdruff/git-splits
+
+# Git Split
+#
+# Splits A Repo's directoies and/or files into a separate branch
+# retaining the desired content's history, and removing
+# the rest. Because it uses filter-branch, the original branch will be
+# written to .git/refs/original as a backup. If you run this command twice on the same
+# branch, you'll need to use -f which will remove the backup before running it again.
+#
+# Usage:
+#   First, checkout the branch you want to split.
+#   git splits -b mynewbranch keep_me_1 keep_me_2 keep_me_3
+#
+# Run it again on same branch:
+#   git splits -f -b mynewbranch2 keep_me_1 keep_me_2 keep_me_3
+#   -f deletes .git/refs/original . required for subsequent uses on ssame branch
+#   -b <branch name> The branch name that the directories will be extracted into
+#
+# Original @author <andrew@nomostock.com>
+# Modified by jeebak
+# Original idea/credit: jkeating/http://stackoverflow.com/a/6006679/3306354
+
+# GetOpts http://stackoverflow.com/a/16496491/3306354
+usage() { echo "Usage: git splits [-f] -b <branch_name> <keep_me_1> <keep_me_2> ..." 1>&2; exit 1; }
+
+GREP=grep
+if [[ $OSTYPE == darwin* ]] || ! grep --version | grep GNU > /dev/null ; then
+  if ! command -v ggrep > /dev/null; then
+    cat <<EOT
+We need GNU grep, which provides us with the -z option. You seem to only have:
+
+  $(grep --version)
+
+available.
+
+Homebrew provides a "dupes" tap that'll provide us with "ggrep" to fit our
+needs:
+
+  brew tap homebrew/dupes
+  brew install grep
+
+EOT
+    exit 127
+  fi
+  GREP=ggrep
+fi
+
+git_root="$(git rev-parse --show-toplevel)"
+
+while getopts "fb:" o; do
+  case "${o}" in
+    f)
+      echo 'Removing backup refs/orginal'
+      rm -rf "$git_root/.git/refs/original"
+      rm -rf "$git_root/.git-rewrite"
+      ;;
+    b)
+      branch_name=${OPTARG}
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+shift $(( OPTIND - 1 ))
+
+[[ -z "${branch_name}" ]] && usage
+
+for i in "$@"; do
+  # TODO: escape ' for '^$i' ... and maybe a more robust regular expression?
+  keep_me="| $GREP -z -v '^$i' $keep_me"
+done
+
+# Remove .git-rewrite if it already exists.
+rm -rf "$git_root/.git-rewrite"
+git branch "${branch_name}"
+
+git filter-branch \
+  --prune-empty \
+  --index-filter "
+    git ls-tree -z -r --name-only --full-tree \$GIT_COMMIT ${keep_me} \
+    | xargs -0 -r git rm --cached -r" \
+  -- \
+  "${branch_name}"
+
+echo "New branch successfully created at: ${branch_name}"
+git branch
