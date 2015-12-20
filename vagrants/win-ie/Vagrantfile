@@ -1,0 +1,84 @@
+# Usage:    vagrant up windowsVersion-IEversion
+#
+# Eg.       vagrant up xp-8
+#
+# Based off of: # https://gist.github.com/anthonysterling/7cb85670b36821122a4a
+boxes = {
+  "xp-6"     => "http://aka.ms/vagrant-xp-ie6",
+  "xp-8"     => "http://aka.ms/vagrant-xp-ie8",
+  "vista-7"  => "http://aka.ms/vagrant-vista-ie7",
+  "win7-8"   => "http://aka.ms/vagrant-win7-ie8",
+  "win7-9"   => "http://aka.ms/vagrant-win7-ie9",
+  "win7-10"  => "http://aka.ms/vagrant-win7-ie10",
+  "win7-11"  => "http://aka.ms/vagrant-win7-ie11",
+  "win8-10"  => "http://aka.ms/vagrant-win8-ie10",
+  "win8-11"  => "http://aka.ms/vagrant-win81-ie11",
+}
+
+# required_plugins = %w( vagrant-triggers vagrant-vbox-snapshot )
+required_plugins = %w( )
+vagrant_root = File.dirname(__FILE__)
+box_exists = false
+
+if ARGV[0] == "up"
+  if ARGV.count == 1
+    puts "Yikes! Please specify one of these boxes:"
+    boxes.each_key do |name|
+      puts "  vagrant up #{name}"
+    end
+    puts "Thanks!\n"
+    exit
+  end
+
+  if File.exist?("#{vagrant_root}/.vagrant/machines/#{ARGV[1]}/virtualbox/id")
+    box_exists = true
+  end
+end
+
+if ['halt', 'provision', 'reload', 'ssh', 'ssh-config'].include? ARGV[0]
+  puts "Sorry! The '#{ARGV[0]}' subcommand's not available for the '#{ARGV[1]}' machine."
+  exit
+end
+
+required_plugins.each do |plugin|
+  system "vagrant plugin install #{plugin}" unless Vagrant.has_plugin? plugin
+end
+
+Vagrant.configure("2") do |config|
+  boxes.each do |name, url|
+    config.vm.define name do |machine|
+      machine.vm.box = name
+      machine.vm.box_url = url
+    end
+  end
+
+  config.vm.guest = :windows
+  config.vm.boot_timeout = 1
+  config.vm.communicator = "winrm"
+  # No ssh on these
+  config.vm.network :forwarded_port, guest: 22,   host: 2222,  id: "ssh", auto_correct: true, disabled: true
+  config.vm.network :forwarded_port, guest: 3389, host: 33389, id: "rdp", auto_correct: true, disabled: false
+
+  #config.vm.post_up_message = <<-EOT
+  #  WIP: Do not be afraid of the red:
+  #  "Timed out while waiting for the machine to boot...." message
+  #EOT
+
+  # "Vagrant exposes a way to call any command against VBoxManage *just prior to booting* the machine:..."
+  config.vm.provider "virtualbox" do |vm|
+    if box_exists == false
+      vm.customize ["snapshot", :id, "take", "Pre-first Boot (to revert to after 30-days)"]
+      #@machine.ui.info("Took initial Pre-boot snapshot")
+    end
+
+    vm.name = "vagrant - #{ARGV[1]}"
+    vm.gui = true
+    vm.customize ["controlvm", :id, "vrde", "on"]
+    vm.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    vm.customize ["modifyvm", :id, "--vram", "32"]
+    vm.customize ["setextradata", :id, "GUI/SuppressMessages", "all" ]
+    # https://forums.virtualbox.org/viewtopic.php?f=6&t=53684
+    # Gracefully shutdown virtuals when host shuts down?
+    vm.customize ["setextradata", :id, "GUI/DefaultCloseAction", "Shutdown"]
+  end
+end
