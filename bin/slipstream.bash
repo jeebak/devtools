@@ -1,12 +1,35 @@
 #!/usr/bin/env bash
 
-# -------------------------- CHECKS RUNNING IN BASH ---------------------------
+# -- HELPER FUNCTIONS, PT. 1 --------------------------------------------------
+DEBUG=NotEmpty
+DEBUG=
+
+# Echo to strerr
+function errcho() {
+  >&2 echo "$@"
+}
+
+# Die with message to stderr and exit code
+function die() {
+  errcho "$1"
+  exit "$2"
+}
+
+# Quiet it all
+function qt() {
+  "$@" > /dev/null 2>&1
+}
+
+# Quiet only errors
+function qte() {
+  "$@" 2> /dev/null
+}
+# -- CHECKS RUNNING IN BASH ---------------------------------------------------
 INVOKED_AS="$(basename "$BASH")"
 if [[ -z "$INVOKED_AS" ]] || [[ "$INVOKED_AS" != 'bash' ]]; then
-  echo "Please invoke this script thusly: bash $0"
-  exit 127
+  die "Please invoke this script thusly: bash $0" 127
 fi
-# ----------------------------- DON'T RUN AS SUDO -----------------------------
+# -- DON'T RUN AS SUDO --------------------------------------------------------
 if [[ $UID -eq 0 ]]; then
   if [[ ! -z "$SUDO_USER" ]]; then
     cat <<EOT
@@ -15,11 +38,10 @@ That's OK. I'll re-run it as: $SUDO_USER
 EOT
     exec sudo -u "$SUDO_USER" bash -c "$0"
   else
-    echo "Yikes! Please don't run this as root!"
-    exit 127
+    die "Yikes! Please don't run this as root!" 127
   fi
 fi
-# -------------------------- CHECK MAC AND YOSEMITE ---------------------------
+# -- CHECK MAC AND YOSEMITE ---------------------------------------------------
 if [[ $OSTYPE == darwin* ]]; then
   OSX_VERSION="$(sw_vers -productVersion)"
   [[ "$OSX_VERSION" == 10.10* ]] || [[ "$OSX_VERSION" == 10.11* ]]
@@ -37,28 +59,9 @@ EOT
     exit 127
   fi
 else
-  echo "Oops! This script was only meant for Mac OS X"
-  exit 127
+  die "Oops! This script was only meant for Mac OS X" 127
 fi
-# ----------------------------- HELPER FUNCTIONS ------------------------------
-DEBUG=NotEmpty
-DEBUG=
-
-# Echo to strerr
-function errcho() {
-  >&2 echo "$@"
-}
-
-# Quiet it all
-function qt() {
-  "$@" > /dev/null 2>&1
-}
-
-# Quiet only errors
-function qte() {
-  "$@" 2> /dev/null
-}
-
+# -- HELPER FUNCTIONS, PT. 2 --------------------------------------------------
 # Parse out .data sections of this file
 function get_pkgs() {
  sed -n "/Start: $1/,/End: $1/p" "$0"
@@ -187,7 +190,7 @@ function genssl() {
   # Step 4: Generating a Self-Signed Certificate
   openssl x509 -req -days 3650 -in "${domain}.csr" -signkey "${domain}.key" -out "${domain}.crt"
 }
-# --------------------- CHECK AND INSTALL XCODE CLI TOOLS ---------------------
+# -- CHECK AND INSTALL XCODE CLI TOOLS ----------------------------------------
 # .text
 if ! qt xcode-select -p; then
   echo "You don't seem to have Xcode Command Line Tools installed"
@@ -195,7 +198,7 @@ if ! qt xcode-select -p; then
   xcode-select --install
   exit
 fi
-# ------------------- OVERVIEW OF CHANGES THAT WILL BE MADE -------------------
+# -- OVERVIEW OF CHANGES THAT WILL BE MADE ------------------------------------
 cat <<EOT
 
 OK. It looks like we're ready to go.
@@ -236,11 +239,11 @@ $(
 EOT
 
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
-# ------------------ KEEP DISPLAY/SYSTEM FROM IDLING/SLEEPING -----------------
+# -- KEEP DISPLAY/SYSTEM FROM IDLING/SLEEPING ---------------------------------
 # Generously setting for an hour, but clean_up() will kill it upon exit or
 # interrupt
 caffeinate -d -i -t 3600 &
-# --------------------------- VERSION CONTROL /etc ----------------------------
+# -- VERSION CONTROL /etc -----------------------------------------------------
 # We should have git available now, after installing Xcode cli tools
 
 # Slipstream Git commit message prefix
@@ -256,7 +259,7 @@ if [[ ! -f /etc/.git/config ]]; then
   sudo -H bash -c " cd /etc/ ; git init ; git add . ; git commit -m '${SGP} Initial commit' "
 fi
 
-# ----------------------------- PASSWORDLESS SUDO -----------------------------
+# -- PASSWORDLESS SUDO --------------------------------------------------------
 if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
   show_status "Making sudo password-less for 'admin' group"
   sudo sed -i .bak 's/\(%admin[[:space:]]*ALL=(ALL)\) ALL/\1 NOPASSWD: ALL/' /etc/sudoers
@@ -270,7 +273,7 @@ if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; the
 
   sudo rm -f /etc/sudoers.bak
 fi
-# --------------------------------- HOMEBREW ----------------------------------
+# -- HOMEBREW -----------------------------------------------------------------
 echo "== Processing Homebrew =="
 
 if ! qt command -v brew; then
@@ -301,16 +304,16 @@ fi
 
 show_status "brew leaves"
 process "brew leaves"
-# -------------------------- UPDATE AND INSTALL GEMS --------------------------
+# -- UPDATE AND INSTALL GEMS --------------------------------------------------
 echo "== Processing Gem =="
 # sudo gem update --system
 show_status "gem"
 process "gem"
-# --------------------------- INSTALL NPM PACKAGES ----------------------------
+# -- INSTALL NPM PACKAGES -----------------------------------------------------
 echo "== Processing Npm =="
 show_status "npm"
 process "npm"
-# --------------------------- DISABLE OUTGOING MAIL ---------------------------
+# -- DISABLE OUTGOING MAIL ----------------------------------------------------
 echo "== Processing Postfix =="
 
 if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
@@ -334,7 +337,7 @@ if git status | egrep 'postfix/main.cf|postfix/virtual' > /dev/null; then
   sudo -H bash -c " cd /etc/ ; git add postfix/main.cf postfix/virtual ; git commit -m '${SGP} Disable outgoing mail (postfix tweaks)' "
 fi
 popd > /dev/null
-# -------------------------- INSTALL MARIADB (MYSQL) --------------------------
+# -- INSTALL MARIADB (MYSQL) --------------------------------------------------
 echo "== Processing MariaDB =="
 
 # brew info mariadb
@@ -391,7 +394,7 @@ if ! qt launchctl list homebrew.mxcl.mariadb; then
   sleep 7
   mysql -u root mysql <<< "UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES;"
 fi
-# ------------------------------- SETUP SYSTEM PHP.INI -------------------------------
+# -- SETUP SYSTEM PHP.INI -----------------------------------------------------
 echo "== Processing system php.ini =="
 
 # php (cp php.ini.default?)
@@ -418,7 +421,7 @@ if [[ ! -f /etc/php.ini ]]; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add php.ini ; git commit -m '${SGP} Update system php.ini' "
 fi
-# ------------------------------- SETUP APACHE --------------------------------
+# -- SETUP APACHE -------------------------------------------------------------
 echo "== Processing Apache =="
 
 # apache httpd.conf?
@@ -525,7 +528,7 @@ if ! qt sudo launchctl list org.apache.httpd; then
   show_status 'Loading: /System/Library/LaunchDaemons/org.apache.httpd.plist'
   sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist
 fi
-# ------------------------------- WILDCARD DNS --------------------------------
+# -- WILDCARD DNS -------------------------------------------------------------
 echo "== Processing Dnsmasq =="
 
 # dnsmasq (add note to /etc/hosts)
@@ -577,7 +580,7 @@ EOT
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add hosts ; git commit -m '${SGP} Add dnsmasq note to hosts file' "
 fi
-# ------------------------------- SETUP BREW PHP.INI -------------------------------
+# -- SETUP BREW PHP.INI -------------------------------------------------------
 echo "== Processing Brew php.ini =="
 
 for i in /usr/local/etc/php/*/php.ini; do
@@ -614,7 +617,7 @@ for i in /usr/local/etc/php/*/php.ini; do
     sudo -H bash -c " cd /etc/ ; git add homebrew/etc/php/$version/php.ini ; git commit -m '${SGP} Update homebrew/etc/php/$version/php.ini' "
   fi
 done
-# ------------------------- SETUP BREW PHP / XDEBUG----------------------------
+# -- SETUP BREW PHP / XDEBUG---------------------------------------------------
 echo "== Processing Brew PHP / Xdebug =="
 
 [[ ! -d /etc/homebrew/etc/apache2 ]] && sudo mkdir -p /etc/homebrew/etc/apache2
@@ -711,7 +714,7 @@ done
 
 sudo apachectl -k restart
 sleep 3
-# ---------------------- SHOW THE USER CONFIRMATION PAGE ----------------------
+# -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
 if [[ ! -d "$DEV_DIR/slipstream/webroot" ]]; then
   mkdir -p "$DEV_DIR/slipstream/webroot"
   cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
@@ -784,7 +787,7 @@ fi
 # This is necessary to allow for the .data section(s)
 exit
 
-# ------------------------ LIST OF PACKAGES TO INSTALL ------------------------
+# -- LIST OF PACKAGES TO INSTALL ----------------------------------------------
 # .data
 # -----------------------------------------------------------------------------
 # Start: brew tap
