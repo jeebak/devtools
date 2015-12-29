@@ -293,14 +293,6 @@ process "brew cask"
 
 show_status "brew php"
 process "brew php"
-# Make php56 the default
-brew_php_linked="$(cd /usr/local/Library/LinkedKegs && qte ls -d php[57][0-9])"
-# Only link if brew php is not linked. If it is, we assume it was intentionally done
-if [[ -z "$brew_php_linked" ]]; then
-  brew link --overwrite php56
-  [[ ! -e /usr/local/lib/libphp5.so ]] \
-    && ln -svf /usr/local/opt/php56/libexec/apache2/libphp5.so /usr/local/lib/libphp5.so
-fi
 
 show_status "brew leaves"
 process "brew leaves"
@@ -711,6 +703,15 @@ EOT
     fi
   fi
 done
+
+# Make php56 the default
+brew_php_linked="$(cd /usr/local/Library/LinkedKegs && qte ls -d php[57][0-9])"
+# Only link if brew php is not linked. If it is, we assume it was intentionally done
+if [[ -z "$brew_php_linked" ]]; then
+  brew link --overwrite php56
+  [[ ! -e /usr/local/lib/libphp5.so ]] \
+    && ln -svf /usr/local/opt/php56/libexec/apache2/libphp5.so /usr/local/lib/libphp5.so
+fi
 
 sudo apachectl -k restart
 sleep 3
