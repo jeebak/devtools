@@ -650,10 +650,12 @@ sudo sed -i .bak "s;LoadModule php5_module libexec/apache2/libphp5.so;Include /u
 sudo sed -i .bak "s;LoadModule php5_module /usr/local/opt/php56/libexec/apache2/libphp5.so;Include /usr/local/var/run/apache2/php.conf ;" /etc/apache2/httpd.conf
 sudo rm /etc/apache2/httpd.conf.bak
 
+pushd /etc/ > /dev/null
 if git status | egrep 'apache2/httpd.conf' > /dev/null; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf to use brew php' "
 fi
+popd > /dev/null
 
 for i in /usr/local/etc/php/*/conf.d/ext-xdebug.ini; do
   version="$(basename "$(dirname "$(dirname "$i")")")"
