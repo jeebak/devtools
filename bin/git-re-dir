@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+# GetOpts http://stackoverflow.com/a/16496491/3306354
+usage() { echo "Usage: git re-dir [-f] -b FROM TO" 1>&2; exit 1; }
+
+git_root="$(git rev-parse --show-toplevel)"
+
+while getopts "fb:" o; do
+  case "${o}" in
+    f)
+      echo 'Removing backup refs/orginal'
+      rm -rf "$git_root/.git/refs/original"
+      rm -rf "$git_root/.git-rewrite"
+      ;;
+    b)
+      branch_name=${OPTARG}
+      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+shift $(( OPTIND - 1 ))
+
+[[ -z "${branch_name}" ]] && usage
+[[ -z "$1" ]] && usage || FROM="$1"
+[[ -z "$2" ]] && usage || TO="$2"
+
+# Remove .git-rewrite if it already exists.
+rm -rf "$git_root/.git-rewrite"
+git branch "${branch_name}"
+
+TAB="$(printf '\t')"
+
+git filter-branch \
+  --prune-empty \
+  --index-filter "
+    git ls-files -s | sed \"s|${TAB}${FROM}|${TAB}${TO}|\" |
+    GIT_INDEX_FILE=\$GIT_INDEX_FILE.new \
+    git update-index --index-info &&
+    mv \"\$GIT_INDEX_FILE.new\" \"\$GIT_INDEX_FILE\"" \
+  -- \
+  "${branch_name}"
+# HEAD
+
+echo "New branch successfully created at: ${branch_name}"
+git branch
