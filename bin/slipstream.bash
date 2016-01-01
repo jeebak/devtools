@@ -716,6 +716,13 @@ fi
 [[ ! -e /usr/local/lib/libphp5.so ]] \
   && ln -svf /usr/local/opt/php56/libexec/apache2/libphp5.so /usr/local/lib/libphp5.so
 
+# Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
+# keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
+#   http://apple.stackexchange.com/questions/211015/el-capitan-apache-error-message-ah00526
+# This simple commenting out of the line seems to work just fine.
+sudo sed -i .bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
+sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
+
 sudo apachectl -k restart
 sleep 3
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
