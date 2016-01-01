@@ -723,6 +723,13 @@ fi
 sudo sed -i .bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
 sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
 
+pushd /etc/ > /dev/null
+if git status | grep 'apache2/extra/httpd-mpm.conf' > /dev/null; then
+  show_status 'Committing to git'
+  sudo -H bash -c " cd /etc/ ; git add apache2/extra/httpd-mpm.conf ; git commit -m '${SGP} Comment out LockFile in apache2/extra/httpd-mpm.conf' "
+fi
+popd > /dev/null
+
 sudo apachectl -k restart
 sleep 3
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
