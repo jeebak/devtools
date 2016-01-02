@@ -310,14 +310,14 @@ echo "== Processing Postfix =="
 
 if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
   show_status "Disabling outgoing mail"
-  cat <<EOT | sudo tee -a /etc/postfix/main.cf > /dev/null
+  cat <<EOT | qt sudo tee -a /etc/postfix/main.cf
 
 virtual_alias_maps = regexp:/etc/postfix/virtual
 EOT
 fi
 
 if ! qt grep "$USER" /etc/postfix/virtual; then
-  cat <<EOT | sudo tee -a /etc/postfix/virtual > /dev/null
+  cat <<EOT | qt sudo tee -a /etc/postfix/virtual
 
 /.*/ $USER@localhost
 EOT
@@ -342,7 +342,7 @@ fi
 [[ ! -d /etc/homebrew/etc/my.cnf.d ]] && sudo mkdir -p /etc/homebrew/etc/my.cnf.d
 if [[ ! -f /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf ]]; then
   show_status 'Creating: /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf'
-  cat <<EOT | sudo tee /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf > /dev/null
+  cat <<EOT | qt sudo tee /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
 [mysqld]
 innodb_file_per_table = 1
 socket = /tmp/mysql.sock
@@ -449,7 +449,7 @@ if [[ ! -d "/etc/apache2/ssl" ]]; then
 fi
 
 if [[ ! -f /etc/apache2/extra/dev.conf ]]; then
-  cat <<EOT | sudo tee -a /etc/apache2/extra/dev.conf > /dev/null
+  cat <<EOT | qt sudo tee -a /etc/apache2/extra/dev.conf
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
   ServerAlias *.dev *.vmdev
@@ -494,7 +494,7 @@ Listen 443
   </Directory>
 </VirtualHost>
 EOT
-  cat <<EOT | sudo tee -a /etc/apache2/httpd.conf > /dev/null
+  cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
 
 # Local vhost and ssl, for *.dev
 Include /private/etc/apache2/extra/dev.conf
@@ -535,7 +535,7 @@ fi
 
 if [[ ! -f /etc/homebrew/etc/dnsmasq.conf ]]; then
   show_status 'Creating: /etc/homebrew/etc/dnsmasq.conf'
-  cat <<EOT | sudo tee /etc/homebrew/etc/dnsmasq.conf > /dev/null
+  cat <<EOT | qt sudo tee /etc/homebrew/etc/dnsmasq.conf
 address=/.dev/127.0.0.1
 EOT
   show_status 'Linking to: /usr/local/etc/dnsmasq.conf'
@@ -544,7 +544,7 @@ fi
 
 [[ ! -d /etc/resolver ]] && sudo mkdir /etc/resolver
 if [[ ! -f /etc/resolver/dev ]]; then
-  cat <<EOT | sudo tee /etc/resolver/dev > /dev/null
+  cat <<EOT | qt sudo tee /etc/resolver/dev
 nameserver 127.0.0.1
 EOT
 fi
@@ -563,7 +563,7 @@ fi
 qt popd
 
 if ! qt grep -i dnsmasq /etc/hosts; then
-  cat <<EOT | sudo tee -a /etc/hosts > /dev/null
+  cat <<EOT | qt sudo tee -a /etc/hosts
 
 # NOTE: dnsmasq is managing *.dev domains (foo.dev) so there's no need to add such here
 # Use this hosts file for non-.dev domains like: foo.bar.com
@@ -616,13 +616,13 @@ echo "== Processing Brew PHP / Xdebug =="
 
 if [[ ! -f /etc/homebrew/etc/apache2/php5.conf ]]; then
   show_status 'Updating httpd.conf settings, to use brew php'
-  cat <<EOT | sudo tee /etc/homebrew/etc/apache2/php5.conf > /dev/null
+  cat <<EOT | qt sudo tee /etc/homebrew/etc/apache2/php5.conf
 LoadModule php5_module /usr/local/lib/libphp5.so
 EOT
 fi
 
 if [[ ! -f /etc/homebrew/etc/apache2/php7.conf ]]; then
-  cat <<EOT | sudo tee /etc/homebrew/etc/apache2/php7.conf > /dev/null
+  cat <<EOT | qt sudo tee /etc/homebrew/etc/apache2/php7.conf
 LoadModule php7_module /usr/local/lib/libphp7.so
 
 <IfModule php7_module>
@@ -675,7 +675,7 @@ for i in /usr/local/etc/php/*/conf.d/ext-xdebug.ini; do
       sudo -H bash -c " cd /etc/ ; git add homebrew/etc/php/$version/conf.d/ext-xdebug.ini ; git commit -m '${SGP} Add homebrew/etc/php/$version/conf.d/ext-xdebug.ini as a copy of homebrew default' "
 
       show_status "Updating: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-      cat <<EOT | sudo tee "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" > /dev/null
+      cat <<EOT | qt sudo tee "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
 [xdebug]
 ; The "real" path to the .so file would be:
 ;   zend_extension="/usr/local/Cellar/php${ver}-xdebug/*/xdebug.so"
