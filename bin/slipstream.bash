@@ -143,7 +143,7 @@ function get_installed() {
     'brew leaves'|'brew php')
       brew list | sort -u;;
     npm)
-      npm -g list 2>| /dev/null | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u;;
+      qte npm -g list | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u;;
     gem)
       $1 list | sed 's/ .*$//' | sort -u;;
     *)
@@ -324,7 +324,7 @@ EOT
 fi
 
 qt pushd /etc/
-if git status | egrep 'postfix/main.cf|postfix/virtual' > /dev/null; then
+if git status | qt egrep 'postfix/main.cf|postfix/virtual'; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add postfix/main.cf postfix/virtual ; git commit -m '${SGP} Disable outgoing mail (postfix tweaks)' "
 fi
@@ -556,7 +556,7 @@ if ! qt sudo launchctl list homebrew.mxcl.dnsmasq; then
 fi
 
 qt pushd /etc/
-if git status | egrep 'resolver/dev|homebrew/etc/dnsmasq.conf' > /dev/null; then
+if git status | qt egrep 'resolver/dev|homebrew/etc/dnsmasq.conf'; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add resolver/dev homebrew/etc/dnsmasq.conf ; git commit -m '${SGP} Add dnsmasq files' "
 fi
@@ -651,7 +651,7 @@ sudo sed -i .bak "s;LoadModule php5_module /usr/local/opt/php56/libexec/apache2/
 sudo rm /etc/apache2/httpd.conf.bak
 
 qt pushd /etc/
-if git status | egrep 'apache2/httpd.conf' > /dev/null; then
+if git status | qt egrep 'apache2/httpd.conf'; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf to use brew php' "
 fi
@@ -724,7 +724,7 @@ sudo sed -i .bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
 sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
 
 qt pushd /etc/
-if git status | grep 'apache2/extra/httpd-mpm.conf' > /dev/null; then
+if git status | qt grep 'apache2/extra/httpd-mpm.conf'; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add apache2/extra/httpd-mpm.conf ; git commit -m '${SGP} Comment out LockFile in apache2/extra/httpd-mpm.conf' "
 fi
