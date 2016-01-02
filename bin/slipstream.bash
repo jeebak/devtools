@@ -323,12 +323,12 @@ if ! qt grep "$USER" /etc/postfix/virtual; then
 EOT
 fi
 
-pushd /etc/ > /dev/null
+qt pushd /etc/
 if git status | egrep 'postfix/main.cf|postfix/virtual' > /dev/null; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add postfix/main.cf postfix/virtual ; git commit -m '${SGP} Disable outgoing mail (postfix tweaks)' "
 fi
-popd > /dev/null
+qt popd
 # -- INSTALL MARIADB (MYSQL) --------------------------------------------------
 echo "== Processing MariaDB =="
 
@@ -555,12 +555,12 @@ if ! qt sudo launchctl list homebrew.mxcl.dnsmasq; then
   sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
 fi
 
-pushd /etc/ > /dev/null
+qt pushd /etc/
 if git status | egrep 'resolver/dev|homebrew/etc/dnsmasq.conf' > /dev/null; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add resolver/dev homebrew/etc/dnsmasq.conf ; git commit -m '${SGP} Add dnsmasq files' "
 fi
-popd > /dev/null
+qt popd
 
 if ! qt grep -i dnsmasq /etc/hosts; then
   cat <<EOT | sudo tee -a /etc/hosts > /dev/null
@@ -650,12 +650,12 @@ sudo sed -i .bak "s;LoadModule php5_module libexec/apache2/libphp5.so;Include /u
 sudo sed -i .bak "s;LoadModule php5_module /usr/local/opt/php56/libexec/apache2/libphp5.so;Include /usr/local/var/run/apache2/php.conf ;" /etc/apache2/httpd.conf
 sudo rm /etc/apache2/httpd.conf.bak
 
-pushd /etc/ > /dev/null
+qt pushd /etc/
 if git status | egrep 'apache2/httpd.conf' > /dev/null; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf to use brew php' "
 fi
-popd > /dev/null
+qt popd
 
 for i in /usr/local/etc/php/*/conf.d/ext-xdebug.ini; do
   version="$(basename "$(dirname "$(dirname "$i")")")"
@@ -723,12 +723,12 @@ fi
 sudo sed -i .bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
 sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
 
-pushd /etc/ > /dev/null
+qt pushd /etc/
 if git status | grep 'apache2/extra/httpd-mpm.conf' > /dev/null; then
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add apache2/extra/httpd-mpm.conf ; git commit -m '${SGP} Comment out LockFile in apache2/extra/httpd-mpm.conf' "
 fi
-popd > /dev/null
+qt popd
 
 sudo apachectl -k restart
 sleep 3
