@@ -4,16 +4,38 @@
 #
 # Based off of: # https://gist.github.com/anthonysterling/7cb85670b36821122a4a
 boxes = {
-  "xp-6"     => "http://aka.ms/vagrant-xp-ie6",
-  "xp-8"     => "http://aka.ms/vagrant-xp-ie8",
-  "vista-7"  => "http://aka.ms/vagrant-vista-ie7",
-  "win7-8"   => "http://aka.ms/vagrant-win7-ie8",
-  "win7-9"   => "http://aka.ms/vagrant-win7-ie9",
-  "win7-10"  => "http://aka.ms/vagrant-win7-ie10",
-  "win7-11"  => "http://aka.ms/vagrant-win7-ie11",
-  "win8-10"  => "http://aka.ms/vagrant-win8-ie10",
-  "win8-11"  => "http://aka.ms/vagrant-win81-ie11",
+  "xp-6"       => "http://aka.ms/vagrant-xp-ie6",
+  "xp-8"       => "http://aka.ms/vagrant-xp-ie8",
+  "vista-7"    => "http://aka.ms/vagrant-vista-ie7",
+  "win7-8"     => "http://aka.ms/vagrant-win7-ie8",
+  "win7-9"     => "http://aka.ms/vagrant-win7-ie9",
+  "win7-10"    => "http://aka.ms/vagrant-win7-ie10",
+  "win7-11"    => "http://aka.ms/vagrant-win7-ie11",
+  "win8-10"    => "http://aka.ms/vagrant-win8-ie10",
+  "win8-11"    => "http://aka.ms/vagrant-win81-ie11",
+  "win10-edge" => "MsEdge - Win10.box",
 }
+
+if ARGV[1] == "win10-edge" && ! ( File.exist?(boxes["win10-edge"]) || File.exist?("#{vagrant_root}/.vagrant/machines/#{ARGV[1]}/virtualbox/id") )
+  puts <<EOT
+
+You've requested: win10-edge. While Microsoft is providing us with:
+
+  "#{boxes["win10-edge"]}"
+
+it's only available as a .zip file. Until this Vagrantfile can be updated to
+automate this process, for now, you can manually download:
+
+  https://az792536.vo.msecnd.net/vms/VMBuild_20150916/Vagrant/MsEdge/MsEdge.Win10.Vagrant.zip
+
+and unzip it here (in this folder.) You'll wind up with the above .box file.
+
+Strangely, they are both: 4.8GB, but are definately different files. Once the
+virtual is up and running, you may delete both the .zip and the .box file.
+
+EOT
+  exit
+end
 
 # required_plugins = %w( vagrant-triggers vagrant-vbox-snapshot )
 required_plugins = %w( )
@@ -73,7 +95,10 @@ Vagrant.configure("2") do |config|
 
     vm.name = "vagrant - #{ARGV[1]}"
     vm.gui = true
-    vm.customize ["controlvm", :id, "vrde", "on"]
+    # Recently started getting:
+    #   Stderr: VBoxManage: error: Machine '55e6b27a-920a-4705-8e7f-71b125b38d11' is not currently running
+    # so comemnting out:
+    # vm.customize ["controlvm", :id, "vrde", "on"]
     vm.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
     vm.customize ["modifyvm", :id, "--vram", "32"]
     vm.customize ["setextradata", :id, "GUI/SuppressMessages", "all" ]
