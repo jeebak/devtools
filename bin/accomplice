@@ -644,7 +644,7 @@ function accpl.si() {
   clean_mysql_db="$(accpl.__get_clean_mysql_db)"
   accpl.c
 
-  drush_output="$(drush dl drupal 2>&1)"
+  drush_output="$(accpl.__call_drush dl drupal 2>&1)"
   errcho "$drush_output"
   drush_output="$(echo "$drush_output" | grep 'downloaded to ' | sed -e 's;^[^/]*;;' -e 's/\. .*$//')"
 
@@ -654,7 +654,7 @@ function accpl.si() {
 
   mkdir -p "$drupal_root"/sites/all/modules/{contrib,custom,features} "$drupal_root"/sites/all/libraries
 
-  drush -r "$drupal_root"\
+  accpl.__call_drush \
     site-install standard   \
       --account-name=admin  \
       --account-pass=admin  \
@@ -755,7 +755,7 @@ function accpl.addme() {
         accpl.__call_drush user-add-role "$role" "$uid"
       done <<< "$roles"
 
-      if drush pm-list --pipe --type=module --status=enabled --no-core | egrep '\bemail_registration\b' > /dev/null 2>&1; then
+      if accpl.__call_drush pm-list --pipe --type=module --status=enabled --no-core | egrep '\bemail_registration\b' > /dev/null 2>&1; then
         errcho "*************************************************************************************** "
         errcho "***** The 'email_registration' module is enabled. Use your email address to login ***** "
         errcho "*************************************************************************************** "
@@ -1193,7 +1193,7 @@ function accpl.cd() {
     DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
     [[ ! -d "$DRUPAL_CLONE/.git" ]] && errcho "No drupal clone" && exit 1
 
-    drupal_version="$(drush status drupal-version --format=list)"
+    drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
     drupal_root="$(accpl.__get_drupal_root)"
     git_root="$(accpl.__get_git_root)"
     TMP="/tmp/drupal-$drupal_version-$$"
@@ -1220,7 +1220,7 @@ function accpl.cus() {
     DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
     [[ ! -d "$DRUPAL_CLONE/.git" ]] && errcho "No drupal clone" && exit 1
 
-    drupal_version="$(drush status drupal-version --format=list)"
+    drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
     # TODO: programmaticlly determine prefix (vs. hard-coded 'drupal', and for
     # modules folder contents not in {contrib,custom,features}
     comm -13  <(git --git-dir="$DRUPAL_CLONE/.git" ls-tree --name-only -r "$drupal_version" | sed 's;^;drupal/;' | sort) \
