@@ -400,6 +400,7 @@ if [[ ! -f /etc/php.ini ]]; then
   show_status 'Updating some system PHP settings'
   sudo sed -i .bak '
     s|max_execution_time = 30|max_execution_time = 0|
+    s|memory_limit = 128M|memory_limit = 256M|
     s|display_errors = Off|display_errors = On|
     s|display_startup_errors = Off|display_startup_errors = On|
     s|;error_log = php_errors.log|error_log = /var/log/apache2/php_errors.log|
@@ -589,6 +590,7 @@ for i in /usr/local/etc/php/*/php.ini; do
     show_status 'Updating some brew PHP settings'
     sudo sed -i .bak '
       s|max_execution_time = 30|max_execution_time = 0|
+      s|memory_limit = 128M|memory_limit = 256M|
       s|display_errors = Off|display_errors = On|
       s|display_startup_errors = Off|display_startup_errors = On|
       s|;error_log = php_errors.log|error_log = /var/log/apache2/php_errors.log|
