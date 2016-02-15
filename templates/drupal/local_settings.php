@@ -4,7 +4,6 @@ ini_set('memory_limit', '1024M');
 
 # Drupal 6
 $db_url = 'mysql://__MYSQL_DB__:__MYSQL_DB__@localhost/__MYSQL_DB__';
-
 # Drupal 7
 $databases['default']['default'] = array(
   'driver'    => 'mysql',
@@ -37,3 +36,6 @@ $conf['environment_indicator_overwritten_text_color'] = '#ffffff'; // Doesn't se
 
 // A boolean value indicating whether the Environment Indicator should be visible at all times, fixed at the top/bottom of the screen.
 $conf['environment_indicator_overwritten_fixed'] = TRUE;
+
+// Configure Views
+$conf['views_ui_show_sql_query'] = TRUE;
