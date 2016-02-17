@@ -39,3 +39,4 @@ $conf['environment_indicator_overwritten_fixed'] = TRUE;
 
 // Configure Views
 $conf['views_ui_show_sql_query'] = TRUE;
+$conf['views_ui_show_performance_statistics'] = TRUE;
