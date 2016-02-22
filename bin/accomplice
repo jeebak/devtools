@@ -72,6 +72,20 @@ Usage: $accpl_self <subcommand> [options]
 EOT
 }
 
+function accpl.__call_apachectl() {
+  # apachectl -t -D DUMP_VHOSTS
+  local APACHECTL
+
+  APACHECTL="$(command -v apachectl)"
+  if [[ -z "$APACHECTL" ]]; then
+    APACHECTL="$(command -v apache2ctl)"
+  fi
+
+  [[ -z "$APACHECTL" ]] && errcho "ApacheCtl not found!" && exit 127
+
+  accpl.__verbose_run sudo "$APACHECTL" "$@"
+}
+
 function accpl.__call_drush() {
   local DRUSH drupal_root
 
@@ -815,18 +829,8 @@ function accpl.dls() {
 }
 
 function accpl.adb() {
-  # apachectl -t -D DUMP_VHOSTS
-  local _apachectl
-
-  _apachectl="$(command -v apachectl)"
-  if [[ -z "$_apachectl" ]]; then
-    _apachectl="$(command -v apache2ctl)"
-  fi
-
-  [[ -z "$_apachectl" ]] && errcho "ApacheCtl not found!" && exit 127
-
-  accpl.__verbose_run sudo "$_apachectl" -S
-  accpl.__verbose_run sudo "$_apachectl" configtest
+  accpl.__call_apachectl -S
+  accpl.__call_apachectl configtest
 }
 
 function accpl.aa() {
@@ -895,7 +899,7 @@ function accpl.fp() {
   local apache_group files_root writable i chmod_options
 
   # Apache confs have "Group" but Ubuntu uses env vars, so for now use...
-  accpl.__is_mac && apache_group=_www || apache_group=www-data
+  apache_group="$(accpl.__call_apachectl -S | grep Group: | grep -o '"[^"]*"' | sed 's/"//g')"
 
   if [[ $# -gt 0 ]]; then
     files_root="."
