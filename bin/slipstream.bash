@@ -843,12 +843,15 @@ vlc
 # determine what needs to be installed... so, creating php.
 php55
 php55-mcrypt
+php55-opcache
 php55-xdebug
 php56
 php56-mcrypt
+php56-opcache
 php56-xdebug
 php70
 php70-mcrypt
+php70-opcache
 php70-xdebug
 # End: brew php
 # -----------------------------------------------------------------------------
