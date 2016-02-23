@@ -805,23 +805,26 @@ function accpl.cw() {
 }
 
 function accpl.dls() {
-  local template clean_mysql_db drupal_root
+  local template clean_mysql_db drupal_root local_settings
 
   template="${0%/*}/../templates/drupal/local_settings.php"
   clean_mysql_db="$(accpl.__get_clean_mysql_db)"
   drupal_root="$(accpl.__get_drupal_root)"
+
+  accpl.__is_d8 && local_settings="settings.local" || local_settings="local_settings"
+
   if [[ -d "$drupal_root/sites/default/" ]]; then
-    if [[ ! -f "$drupal_root/sites/default/local_settings.php" ]]; then
-      if grep local_settings.php "$drupal_root/sites/default/settings.php" > /dev/null 2>&1; then
+    if [[ ! -f "$drupal_root/sites/default/${local_settings}.php" ]]; then
+      if grep "${local_settings}.php" "$drupal_root/sites/default/settings.php" > /dev/null 2>&1; then
         sed -e "s/__MYSQL_DB__/$clean_mysql_db/g"      \
             -e "s/__MYSQL_USER__/$clean_mysql_db/g"    \
             -e "s/__MYSQL_PASSWD__/$clean_mysql_db/g"  \
-            $template > "$drupal_root/sites/default/local_settings.php"
+          "$template" > "$drupal_root/sites/default/${local_settings}.php"
       else
-        errcho "The $drupal_root/sites/default/settings.php file either doesn't exist, or does not utilize local_settings.php"
+        errcho "The $drupal_root/sites/default/settings.php file either doesn't exist, or does not utilize ${local_settings}.php"
       fi
     else
-      errcho "Looks like $drupal_root/sites/default/local_settings.php already exists!"
+      errcho "Looks like $drupal_root/sites/default/${local_settings}.php already exists!"
     fi
   else
     errcho "There doesn't seem to be a $drupal_root/sites/default/ folder"
