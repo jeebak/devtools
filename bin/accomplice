@@ -814,7 +814,7 @@ function accpl.dls() {
   accpl.__is_d8 && local_settings="settings.local" || local_settings="local_settings"
 
   if [[ -d "$drupal_root/sites/default/" ]]; then
-    if [[ ! -f "$drupal_root/sites/default/${local_settings}.php" ]]; then
+    if [[ ! -f "$drupal_root/sites/default/setting.php" ]]; then
       if grep "${local_settings}.php" "$drupal_root/sites/default/settings.php" > /dev/null 2>&1; then
         sed -e "s/__MYSQL_DB__/$clean_mysql_db/g"      \
             -e "s/__MYSQL_USER__/$clean_mysql_db/g"    \
