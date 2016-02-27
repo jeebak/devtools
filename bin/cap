@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Wrapper script for Capistrano cap, to find the 1st Capfile in the git repo,
+# cd into the folder containing it, and run the real cap command with the
+# parameters provided.
+#
+# This wrapper can be helpful for situations such as on Pantheon where the
+# $git_root is the same as the webroot (*shudder*) and the Capistrano files are
+# in the private/ folder. The $git_root/Capfile can be a symlink to
+# $git_root/private/Capfile, and:
+#   /Capfile
+# can be added to the $git_root/.gitignore file.
+CAP="$(which -a cap | grep -v "$0" | head -1)"
+
+if [[ -z "$CAP" ]]; then
+  echo "Cap not found!"
+  exit 1
+fi
+
+git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat "$git_root/.git/HEAD")"
+git_head="${git_head##refs/heads/}"
+
+if [[ ! -z "$git_root" ]]; then
+  # Drupal 6, 7, and 8, all seems to have this path to this file:
+  is_drupal="$(git ls-tree -r "$git_head" --name-only --full-tree | grep modules/taxonomy/taxonomy.module)"
+  if [[ ! -z "$is_drupal" ]] && [[ $(wc -l <<< "$is_drupal") -eq 1 ]]; then
+    # Look for Capfile in repo
+    capfile="$(git ls-tree -r "$git_head" --name-only --full-tree | grep 'Capfile$' | head -1)"
+    # Strip away: Capfile and we'll have our: capistrano root
+    cap_root="${capfile/Capfile/}"
+    # Finally, cd there
+    cd "$cap_root" || exit 1
+  else
+    echo "This doesn't seem to be a drupal project"
+    exit 1
+  fi
+fi
+
+$CAP "$@"
