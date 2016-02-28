@@ -17,11 +17,10 @@ if [[ -z "$CAP" ]]; then
 fi
 
 if [[ -f "$PWD/Gemfile" ]] && command -v bundle > /dev/null; then
-  if bundle list | grep ' capistrano ' > /dev/null; then
-    CAP="bundle exec cap"
-  else
+  if ! bundle list | grep ' capistrano ' > /dev/null; then
     bundle install
   fi
+  CAP="bundle exec cap"
 fi
 
 git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
