@@ -16,6 +16,14 @@ if [[ -z "$CAP" ]]; then
   exit 1
 fi
 
+if [[ -f "$PWD/Gemfile" ]] && command -v bundle > /dev/null; then
+  if bundle list | grep ' capistrano ' > /dev/null; then
+    CAP="bundle exec cap"
+  else
+    bundle install
+  fi
+fi
+
 git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
 git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat "$git_root/.git/HEAD")"
 git_head="${git_head##refs/heads/}"
