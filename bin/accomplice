@@ -255,7 +255,9 @@ function accpl.__run_compass() {
   sassdir_relative="$(sed "s;$git_root/;;" <<< "$sassdir")"
 
   if accpl.__git_ls_grep "$sassdir_relative/Gemfile"; then # 2> /dev/null; then
-    "$BUNDLE" install
+    if ! "$BUNDLE" list | grep ' compass ' > /dev/null; then
+      "$BUNDLE" install
+    fi
     COMPASS="$BUNDLE exec compass"
   fi
 
