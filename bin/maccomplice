@@ -17,7 +17,7 @@ Usage: $accpl_self <subcommand> [options]
 
   System Helper Subcommands:
     ra        Restart Apache
-    rd        Restart DnsMasq
+    rd        Restart DnsMasq/mDNSResponder
     rm        Restart MySQL
 
     rdk       Restart Dock
@@ -128,8 +128,9 @@ function accpl.__reload_plist() {
   fi
 
   if [[ -f "$plist" ]]; then
-    accpl.__verbose_run $_sudo launchctl unload "$plist"
-    accpl.__verbose_run $_sudo launchctl load   "$plist"
+    # man launchctl: -w Overrides the Disabled key and sets it to false or true
+    accpl.__verbose_run $_sudo launchctl unload -w "$plist"
+    accpl.__verbose_run $_sudo launchctl load   -w "$plist"
   else
     errcho "$plist NOT FOUND!"
   fi
@@ -164,6 +165,7 @@ function accpl.ra() {
 
 function accpl.rd() {
   accpl.__reload_plist '/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist'
+  accpl.__reload_plist '/System/Library/LaunchDaemons/com.apple.mDNSResponder.plist'
 }
 
 function accpl.rm() {
