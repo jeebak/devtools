@@ -260,6 +260,7 @@ function accpl.tellit() {
 }
 
 function accpl.togg_app() {
+  # Based on:
   # http://brettterpstra.com/2011/01/22/quick-tip-applescript-application-toggle/
   # http://z12t.com/osx_global_onenote_hotkey/
   # http://apple.stackexchange.com/questions/191845/open-application-in-specific-space-through-applescript
@@ -275,16 +276,15 @@ set startIt to false
 tell application \"System Events\"
   if not (exists process appName) then
     set startIt to true
-    -- else if frontmost of process appName then
-    -- (this didn't seem to work. perhaps because *this* app was frontmost at the time of invocation)
   else if visible of process appName then
-    -- These didn't seem to work:
-    -- tell application \"System Events\" to tell process appName to keystroke \"h\" using command down
-    -- tell application \"Finder\" to set visible of process appName to false
-    -- tell application \"System Events\" to set visible of process appName to false
-    -- ... so went with ...
-    set visible of process appName to false
+    if frontmost of process appName then
+      set visible of process appName to false
+    else
+      set frontmost of process appName to true
+    end if
   else
+    -- may be redundant
+    set visible of process appName to true
     set frontmost of process appName to true
   end if
 end tell"
