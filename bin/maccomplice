@@ -287,7 +287,17 @@ tell application \"System Events\"
     set visible of process appName to true
     set frontmost of process appName to true
   end if
-end tell"
+end tell
+
+if startIt then
+  display notification appName with title \"Starting:\"
+
+  tell application appName
+    activate
+    set frontmost to true
+    set visible to true
+  end tell
+end if"
 }
 
 function accpl.pl() {
