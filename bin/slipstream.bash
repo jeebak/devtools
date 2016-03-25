@@ -862,6 +862,9 @@ node
 mariadb
 # Network
 dnsmasq
+# Shell
+bash-completion
+bash-git-prompt
 # Utilities
 composer
 coreutils
