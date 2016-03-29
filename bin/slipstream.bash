@@ -866,6 +866,7 @@ dnsmasq
 bash-completion
 bash-git-prompt
 # Utilities
+apachetop
 composer
 coreutils
 drush
