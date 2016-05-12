@@ -819,6 +819,7 @@ homebrew/services
 # Editors
 sublime-text
 # Misc
+clipmenu
 # gimp
 google-chrome
 google-hangouts
