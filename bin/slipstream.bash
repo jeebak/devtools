@@ -868,11 +868,16 @@ bash-completion
 bash-git-prompt
 # Utilities
 apachetop
+boris
 composer
 coreutils
+drupalconsole
 drush
+php-cs-fixer
 pngcrush
 psysh
+symfony-installer
+terminus
 the_silver_searcher
 wp-cli
 # End: brew leaves
