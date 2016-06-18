@@ -734,10 +734,28 @@ qt popd
 
 sudo apachectl -k restart
 sleep 3
+# -- SETUP ADMINER ------------------------------------------------------------
+show_status 'Setting up adminer'
+if [[ -d "$DEV_DIR/adminer/webroot" ]]; then
+  cat <<EOT
+
+It looks like you already have "$DEV_DIR/adminer/webroot" on your system. If
+you'd like to use the brew maintained version of Adminer, you can overwrite
+your current install of adminer with:
+
+  ln -svf "/usr/local/share/adminer/index.php" "$DEV_DIR/adminer/webroot/index.php"
+
+EOT
+else
+  mkdir -p "$DEV_DIR/adminer/webroot"
+  ln -svf "/usr/local/share/adminer/index.php" "$DEV_DIR/adminer/webroot/index.php"
+fi
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
 if [[ ! -d "$DEV_DIR/slipstream/webroot" ]]; then
   mkdir -p "$DEV_DIR/slipstream/webroot"
-  cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
+fi
+
+cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
 <div style="width: 600px; margin: auto;">
   <h4>If you're seeing this, then it's a good sign that everything's working</h4>
 <?php
@@ -775,6 +793,14 @@ if [[ ! -d "$DEV_DIR/slipstream/webroot" ]]; then
   mysql -p -u root mysql
 </pre>
 
+<p>
+  You can now access Adminer at: <a href="http://adminer.dev/">http://adminer.dev/</a>
+  using the same mysql credentials.
+  Optionally, you can download a
+  <a href="https://www.adminer.org/#extras" target="_blank">custom theme</a> adminer.css
+  to "$DEV_DIR/adminer/webroot/adminer.css"
+</p>
+
 <h4>These are the packages were installed</h4>
 <p>
   <strong>Brew:</strong>
@@ -798,8 +824,8 @@ if [[ ! -d "$DEV_DIR/slipstream/webroot" ]]; then
   phpinfo();
 ?>
 EOT
-  open http://slipstream.dev/
-fi
+
+open http://slipstream.dev/
 # -----------------------------------------------------------------------------
 # We're done! Now,...
 # clean_up (called automatically, since we're trap-ing EXIT signal)
@@ -860,6 +886,7 @@ php70-xdebug
 # Development Envs
 node
 # Database
+adminer
 mariadb
 # Network
 dnsmasq
