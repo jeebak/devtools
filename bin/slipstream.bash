@@ -736,7 +736,7 @@ sudo apachectl -k restart
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
 show_status 'Setting up adminer'
-if [[ -d "$DEV_DIR/adminer/webroot" ]]; then
+if [[ -d "$DEV_DIR/adminer/webroot" ]] && [[ "$(readlink "$DEV_DIR/adminer/webroot/index.php")" != "/usr/local/share/adminer/index.php" ]]; then
   cat <<EOT
 
 It looks like you already have "$DEV_DIR/adminer/webroot" on your system. If
