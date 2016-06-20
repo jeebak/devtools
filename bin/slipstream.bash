@@ -74,6 +74,8 @@ function clean_up() {
   errcho "Cleaning up! Bye!"
   # Kill all caffeinate processes that are children of this script
   pkill -P $MYPID caffeinate
+
+  exit
 }
 
 trap clean_up EXIT INT QUIT KILL TERM
@@ -202,34 +204,17 @@ fi
 cat <<EOT
 
 OK. It looks like we're ready to go.
-*****************************************************************
-***** NOTE: This script assumes a "virgin" Yosemite state.  *****
-***** If you've already made changes to files in /etc, then *****
-***** all bets are off. You have been WARNED!               *****
-*****************************************************************
+*******************************************************************************
+***** NOTE: This script assumes a "pristine" installation  of Yosemite or *****
+***** El Capitan state. If you've already made changes to files in /etc,  *****
+***** then all bets are off. You have been WARNED!                        *****
+*******************************************************************************
 If you wish to continue, then this is what I'll be doing:
   - Git-ifying your /etc folder
   - Allow for password-less sudo by altering /etc/sudoers
-  - Install home brew, and some brew packages:
-$(
-  echo $(clean <(get_pkgs "brew cask")) \
-       $(clean <(get_pkgs "brew php")) \
-       $(clean <(get_pkgs "brew leaves")) \
-    | fold -w $(($(tput cols) - 6)) -s \
-    | sed 's/^/      /'
-)
-  - Update the System Ruby Gem, and install some gems:
-$(
-  echo $(clean <(get_pkgs "gem")) \
-    | fold -w $(($(tput cols) - 6)) -s \
-    | sed 's/^/      /'
-)
-  - Install some npm packages:
-$(
-  echo $(clean <(get_pkgs "npm")) \
-    | fold -w $(($(tput cols) - 6)) -s \
-    | sed 's/^/      /'
-)
+  - Install home brew, and some brew packages
+  - Update the System Ruby Gem, and install some gems
+  - Install some npm packages
   -- Configure:
     - Postfix (Disable outgoing mail)
     - MariaDB (InnoDB tweaks, etc.)
