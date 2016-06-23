@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Wrapper script for drupal console, to work anywhere within a git tree, not
+# restricted to within the drupal root.
+DRUPAL="$(which -a drupal | grep -v "$0" | head -1)"
+
+if [[ -z "$DRUPAL" ]]; then
+  echo "drupal not found!"
+  exit 1
+fi
+
+git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat $git_root/.git/HEAD)"
+git_head="${git_head##refs/heads/}"
+
+if [[ ! -z "$git_root" ]]; then
+  # Drupal 6, 7, and 8, all seems to have this path to this file:
+  is_drupal="$(git ls-tree -r "$git_head" --name-only --full-tree | grep modules/taxonomy/taxonomy.module)"
+  if [[ ! -z "$is_drupal" ]] && [[ $(wc -l <<< "$is_drupal") -eq 1 ]]; then
+    # Strip away: modules/taxonomy/taxonomy.module and we'll have our: drupal_root
+    # Drupal 8 path is (currently) prefixed: with core/ ... but, of course, it will
+    # still fail if your version of drupal doesn't support Drupal 8.
+    drupal_root="$(sed 's;core[/]*$;;' <<< "${is_drupal/modules\/taxonomy\/taxonomy.module/}")"
+    # Set additional option(s) to pass along to drupal...
+    options="--root=$git_root/$drupal_root"
+  fi
+fi
+
+$DRUPAL $options "$@"
