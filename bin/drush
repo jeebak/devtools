@@ -8,9 +8,6 @@ if [[ -z "$DRUSH" ]]; then
   exit 1
 fi
 
-# Because I always forget to: drush | less ...
-[[ $# -eq 0 ]] && exec ${PAGER:-less} <<< "$($DRUSH)"
-
 git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
 git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat $git_root/.git/HEAD)"
 git_head="${git_head##refs/heads/}"
@@ -28,4 +25,5 @@ if [[ ! -z "$git_root" ]]; then
   fi
 fi
 
-$DRUSH $options "$@"
+# Because I always forget to: drush | less ...
+[[ $# -eq 0 ]] && exec ${PAGER:-less} <<< "$($DRUSH $options)" || $DRUSH $options "$@"
