@@ -875,6 +875,7 @@ adminer
 mariadb
 # Network
 dnsmasq
+sshuttle
 # Shell
 bash-completion
 bash-git-prompt
