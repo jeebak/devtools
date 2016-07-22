@@ -6,6 +6,7 @@
   <item>
     <name>My Extras</name>
 
+    <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/escape_tap_hold_control.xml" />
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/jasonrudolph-f19_tap_escape_hold_control.xml" />
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/jasonrudolph-double_tap_left_command_for_capslock.xml" />
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/msolomon-tap_shift_to_move_over_words.xml" />

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<root>
+
+    <!--
+        Based on: https://github.com/jasonrudolph/keyboard
+    -->
+    <item>
+      <!--
+        Inspired by and adapted from Steve Losh's "Modern Space Cadet" post:
+        http://stevelosh.com/blog/2012/10/a-modern-space-cadet/#controlescape
+      -->
+      <name>Tap Escape/Hold Control</name>
+      <appendix>Tap Escape for Escape; Hold Escape for Control</appendix>
+      <identifier>remap.escape_tap_hold_control</identifier>
+      <autogen>
+        --KeyOverlaidModifier--
+        KeyCode::ESCAPE,
+        KeyCode::CONTROL_L,
+        KeyCode::ESCAPE
+      </autogen>
+    </item>
+
+</root>
