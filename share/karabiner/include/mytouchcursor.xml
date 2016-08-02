@@ -42,10 +42,10 @@
 
       <!-- A: Option/Alt (pleasant surprise that this worked! -->
       <autogen>__KeyToKey__ KeyCode::A, KeyCode::OPTION_L</autogen>
-      <!-- E: Shift -->
-      <autogen>__KeyToKey__ KeyCode::E, KeyCode::SHIFT_L</autogen>
-      <!-- R: Command -->
-      <autogen>__KeyToKey__ KeyCode::R, KeyCode::COMMAND_L</autogen>
+      <!-- E: Command -->
+      <autogen>__KeyToKey__ KeyCode::E, KeyCode::COMMAND_L</autogen>
+      <!-- R: Shift -->
+      <autogen>__KeyToKey__ KeyCode::R, KeyCode::SHIFT_L</autogen>
       <!-- S: Space (repeatable) -->
       <autogen>__KeyToKey__ KeyCode::S, KeyCode::SPACE</autogen>
 
@@ -106,7 +106,7 @@
       <appendix>───────────────────────────────────────</appendix>
       <appendix>TouchCursor: IKJL (↑, ↓, ←, →) UO (Home, End) PM (BS, Delete) HN (PgUp, PgDn)</appendix>
       <appendix>───────────────────────────────────────</appendix>
-      <appendix>MyTouchCursor: AERS (⌥, ⇧, ⌘, [Repeatable] Spacebar) (Caps Lock can be: ⌃)</appendix>
+      <appendix>MyTouchCursor: AERS (⌥, ⌘, ⇧, [Repeatable] Spacebar) (Caps Lock can be: ⌃)</appendix>
       <appendix>NOTE: These can be useful in conjunction with arrow keys, or mouse click actions</appendix>
       <appendix>W: Delete from cursor to beginning of line, D: Delete from cursor to end of line</appendix>
       <appendix>───────────────────────────────────────</appendix>
