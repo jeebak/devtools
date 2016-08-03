@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<root>
+
+    <!--
+        Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
+        Useful to match behavior on personalized Planck keymap
+    -->
+    <item>
+      <name>Right Shift: Tap to enter, hold to shift</name>
+      <appendix>Right shift key returns when tapped. When used with other keys they act as normal shifts.</appendix>
+      <identifier>private.right_shifts_to_enter</identifier>
+
+      <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::ENTER</autogen>
+    </item>
+
+</root>
