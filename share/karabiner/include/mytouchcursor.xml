@@ -49,9 +49,7 @@
       <!-- S: Space (repeatable) -->
       <autogen>__KeyToKey__ KeyCode::S, KeyCode::SPACE</autogen>
 
-      <!-- QFGY: Command AFGY (Select All, Find, Find Again, Redo) -->
-      <!-- NOTE: using Q for Select All, as A for Option/All is used more -->
-      <autogen>__KeyToKey__ KeyCode::Q, KeyCode::A, ModifierFlag::COMMAND_L</autogen>
+      <!-- FGY: Command AFGY (Find, Find Again, Redo) -->
       <autogen>__KeyToKey__ KeyCode::F, KeyCode::F, ModifierFlag::COMMAND_L</autogen>
       <autogen>__KeyToKey__ KeyCode::G, KeyCode::G, ModifierFlag::COMMAND_L</autogen>
       <autogen>__KeyToKey__ KeyCode::Y, KeyCode::Y, ModifierFlag::COMMAND_L</autogen>
@@ -62,19 +60,25 @@
       <autogen>__KeyToKey__ KeyCode::C, KeyCode::C, ModifierFlag::COMMAND_L</autogen>
       <autogen>__KeyToKey__ KeyCode::V, KeyCode::V, ModifierFlag::COMMAND_L</autogen>
 
-      <!-- [TAB]: Command TAB -->
+      <!-- [TAB]QW: Command TAB, AltTab, CtrlTab -->
       <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::Q, KeyCode::TAB, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::W, KeyCode::TAB, ModifierFlag::CONTROL_L</autogen>
 
       <!-- W: Delete from cursor to beginning of line -->
+      <!--
       <autogen>
         __KeyToKey__ KeyCode::W,
         KeyCode::CURSOR_LEFT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
       </autogen>
+      -->
       <!-- D: Delete from cursor to end of line -->
+      <!--
       <autogen>
         __KeyToKey__ KeyCode::D,
         KeyCode::CURSOR_RIGHT, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L, KeyCode::FORWARD_DELETE
       </autogen>
+      -->
 
       <!-- T: Tilde / B: Backtick  -->
       <autogen>
@@ -99,6 +103,32 @@
       <autogen>__KeyToKey__ KeyCode::SLASH, KeyCode::SLASH, ModifierFlag::COMMAND_L </autogen>
     </item>
 
+    <!-- http://osxdaily.com/2012/03/27/making-sense-of-mac-keyboard-symbols/
+      Full Keyboard Symbol List:
+        ⌘ is command
+        ⌥ is option
+        ⌃ is control
+        ⇧ is shift
+        ⇪ is caps lock
+        ← is left arrow
+        → is right arrow
+        ↑ is up arrow
+        ↓ is down arrow
+        ⇥ is tab
+        ⇤ is backtab
+        ↩ is return
+        ⌤ is enter
+        ⌫ is delete
+        ⌦ is forward delete
+        ⇞ is page up
+        ⇟ is page down
+        ↖ is home
+        ↘ is end
+        ⌧ is clear
+        ␣ is space
+        ⎋ is escape
+        ⏏ is ejec
+    -->
     <item>
       <name>Activate MyTouchCursor by Space</name>
       <appendix>(Please adjust "[Key Overlaid Modifier] Initial Modifier Wait" in Key Repeat tab</appendix>
@@ -108,10 +138,9 @@
       <appendix>───────────────────────────────────────</appendix>
       <appendix>MyTouchCursor: AERS (⌥, ⌘, ⇧, [Repeatable] Spacebar) (Caps Lock can be: ⌃)</appendix>
       <appendix>NOTE: These can be useful in conjunction with arrow keys, or mouse click actions</appendix>
-      <appendix>W: Delete from cursor to beginning of line, D: Delete from cursor to end of line</appendix>
+      <appendix>[⇥,Q,W] (⌥,⌘,,⌃)⇥</appendix>
       <appendix>───────────────────────────────────────</appendix>
-      <appendix>QFGY: ⌘-[qfgy] (Select All, Find, Find Again, Redo)</appendix>
-      <appendix>NOTE: Using 'q' for Select All, as 'a' is used for ⌥ </appendix>
+      <appendix>FGY: ⌘-[fgy] (Find, Find Again, Redo)</appendix>
       <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste) - [TAB]: ⌥-⇥</appendix>
 
       <identifier>remap.mytouchcursor</identifier>
