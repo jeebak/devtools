@@ -62,9 +62,9 @@
       <autogen>__KeyToKey__ KeyCode::C, KeyCode::C, ModifierFlag::COMMAND_L</autogen>
       <autogen>__KeyToKey__ KeyCode::V, KeyCode::V, ModifierFlag::COMMAND_L</autogen>
 
-      <!-- [TAB]QW: Command TAB, AltTab, CtrlTab -->
-      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::COMMAND_L</autogen>
-      <autogen>__KeyToKey__ KeyCode::Q,   KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
+      <!-- [TAB]QW: AltTab, Command TAB, CtrlTab -->
+      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::Q,   KeyCode::TAB, ModifierFlag::COMMAND_L</autogen>
       <autogen>__KeyToKey__ KeyCode::W,   KeyCode::TAB, ModifierFlag::CONTROL_L</autogen>
 
       <!-- W: Delete from cursor to beginning of line -->
