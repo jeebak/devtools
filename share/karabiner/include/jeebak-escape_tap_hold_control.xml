@@ -2,7 +2,9 @@
 <root>
 
     <!--
-        Based on: https://github.com/jasonrudolph/keyboard
+      Based on: https://github.com/jasonrudolph/keyboard
+
+      Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
     -->
     <item>
       <!--

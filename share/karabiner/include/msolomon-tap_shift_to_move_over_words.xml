@@ -2,7 +2,9 @@
 <root>
 
     <!--
-        Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
+      Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
+
+      Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
     -->
     <item>
       <name>Tap shift to move over words</name>

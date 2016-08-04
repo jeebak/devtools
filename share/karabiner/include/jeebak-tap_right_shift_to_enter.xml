@@ -2,8 +2,10 @@
 <root>
 
     <!--
-        Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
-        Useful to match behavior on personalized Planck keymap
+      Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
+      Useful to match behavior on personalized Planck keymap
+
+      Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
     -->
     <item>
       <name>Right Shift: Tap to enter, hold to shift</name>

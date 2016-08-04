@@ -4,6 +4,8 @@
   <item>
     <!--
       Compare to: /Applications/Karabiner.app/Contents/Resources/include/checkbox/touchcursor.xml
+
+      Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
     -->
     <name>My TouchCursor</name>
 
@@ -61,9 +63,9 @@
       <autogen>__KeyToKey__ KeyCode::V, KeyCode::V, ModifierFlag::COMMAND_L</autogen>
 
       <!-- [TAB]QW: Command TAB, AltTab, CtrlTab -->
-      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
-      <autogen>__KeyToKey__ KeyCode::Q, KeyCode::TAB, ModifierFlag::COMMAND_L</autogen>
-      <autogen>__KeyToKey__ KeyCode::W, KeyCode::TAB, ModifierFlag::CONTROL_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::TAB, KeyCode::TAB, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::Q,   KeyCode::TAB, ModifierFlag::OPTION_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::W,   KeyCode::TAB, ModifierFlag::CONTROL_L</autogen>
 
       <!-- W: Delete from cursor to beginning of line -->
       <!--
@@ -138,10 +140,10 @@
       <appendix>───────────────────────────────────────</appendix>
       <appendix>MyTouchCursor: AERS (⌥, ⌘, ⇧, [Repeatable] Spacebar) (Caps Lock can be: ⌃)</appendix>
       <appendix>NOTE: These can be useful in conjunction with arrow keys, or mouse click actions</appendix>
-      <appendix>[⇥,Q,W] (⌥,⌘,,⌃)⇥</appendix>
+      <appendix>[⇥, Q, W] (⌘, ⌥, ⌃)⇥</appendix>
       <appendix>───────────────────────────────────────</appendix>
       <appendix>FGY: ⌘-[fgy] (Find, Find Again, Redo)</appendix>
-      <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste) - [TAB]: ⌥-⇥</appendix>
+      <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste)</appendix>
 
       <identifier>remap.mytouchcursor</identifier>
       <autogen>

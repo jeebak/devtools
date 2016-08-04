@@ -2,8 +2,10 @@
 <root>
 
     <!--
-        Based on: https://github.com/jasonrudolph/keyboard
-        Originally double-tap left shift, but conflicted with tap shift
+      Based on: https://github.com/jasonrudolph/keyboard
+      Originally double-tap left shift, but conflicted with tap shift
+
+      Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
     -->
     <item>
       <name>Double-tap Left ⌘ for CapsLock</name>
