@@ -1,7 +1,40 @@
 <?xml version="1.0"?>
 <root>
+
+  <!-- For "Mouse Keys Mode v3" -->
+
+  <!-- From: src/core/server/Resources/modifierdef.xml -->
+  <modifierdef>MOUSE_KEYS_MODE_3</modifierdef>
+  <modifierdef>MOUSE_KEYS_MODE_3_SCROLL</modifierdef>
+
+  <!-- From: src/core/server/Resources/replacementdef.xml -->
+  <replacementdef>
+    <replacementname>MOUSE_KEYS_MODE_3_CONDITION</replacementname>
+    <replacementvalue>
+      <![CDATA[
+               <!-- Disable Mouse Keys Mode v3 when any modifiers are pressed in order to keep control-D key repeat. -->
+               <modifier_not>
+                 ModifierFlag::COMMAND_L,
+                 ModifierFlag::COMMAND_R,
+                 ModifierFlag::CONTROL_L,
+                 ModifierFlag::CONTROL_R,
+                 ModifierFlag::FN,
+                 ModifierFlag::OPTION_L,
+                 ModifierFlag::OPTION_R,
+                 ModifierFlag::SHIFT_L,
+                 ModifierFlag::SHIFT_R,
+               </modifier_not>
+               ]]>
+    </replacementvalue>
+  </replacementdef>
+
+  <replacementdef>
+    <replacementname>MOUSE_KEYS_MODE_3_EXTRA</replacementname>
+    <replacementvalue></replacementvalue>
+  </replacementdef>
+
   <item>
-    <name>Mouse Keys</name>
+    <name>My TouchCursor Mouse Keys</name>
     <item>
       <name style="important">Important:</name>
       <appendix>At least one pointing device must be connected when you use Mouse Keys.</appendix>
@@ -9,7 +42,7 @@
     </item>
 
     <item>
-      <name>Mouse Keys Mode v2</name>
+      <name>Mouse Keys Mode v3</name>
       <appendix>You can move mouse pointer by d+hjkl keys, and scroll by d+s+hjkl keys.</appendix>
       <appendix></appendix>
       <appendix>Usage:</appendix>
@@ -37,21 +70,21 @@
       <appendix></appendix>
       <appendix>Warp cursor position:</appendix>
       <appendix>* D+I: Move mouse cursor to the center of the frontmost app's window.</appendix>
-      <identifier>remap.mouse_keys_mode_2</identifier>
+      <identifier>remap.mouse_keys_mode_3</identifier>
 
-      {{ MOUSE_KEYS_MODE_2_CONDITION }}
+      {{ MOUSE_KEYS_MODE_3_CONDITION }}
 
       <autogen>
         __KeyOverlaidModifier__
         KeyCode::D,
 
         <!--
-            Use notsave.mouse_keys_mode_2 in order to be higher priority.
-            Use ModifierFlag::MOUSE_KEYS_MODE_2 for __DropAllKeys__.
+            Use notsave.mouse_keys_mode_3 in order to be higher priority.
+            Use ModifierFlag::MOUSE_KEYS_MODE_3 for __DropAllKeys__.
         -->
         @begin
-        KeyCode::VK_CONFIG_FORCE_ON_notsave_mouse_keys_mode_2,
-        KeyCode::VK_MODIFIER_MOUSE_KEYS_MODE_2,
+        KeyCode::VK_CONFIG_FORCE_ON_notsave_mouse_keys_mode_3,
+        KeyCode::VK_MODIFIER_MOUSE_KEYS_MODE_3,
         @end
 
         @begin
@@ -60,10 +93,10 @@
       </autogen>
     </item>
     <item hidden="true">
-      <identifier vk_config="true">notsave.mouse_keys_mode_2</identifier>
-      <modifier_only>ModifierFlag::MOUSE_KEYS_MODE_2</modifier_only>
+      <identifier vk_config="true">notsave.mouse_keys_mode_3</identifier>
+      <modifier_only>ModifierFlag::MOUSE_KEYS_MODE_3</modifier_only>
 
-      {{ MOUSE_KEYS_MODE_2_EXTRA }}
+      {{ MOUSE_KEYS_MODE_3_EXTRA }}
 
       <autogen>
         __BlockUntilKeyUp__ KeyCode::D
@@ -71,50 +104,50 @@
 
       <!-- scroll -->
       <block>
-        <modifier_only>ModifierFlag::MOUSE_KEYS_MODE_2_SCROLL</modifier_only>
+        <modifier_only>ModifierFlag::MOUSE_KEYS_MODE_3_SCROLL</modifier_only>
         <autogen>
           __KeyToKey__
           {{ VI_H }},
-          KeyCode::VK_MOUSEKEY_SCROLL_LEFT, ModifierFlag::MOUSE_KEYS_MODE_2,
+          KeyCode::VK_MOUSEKEY_SCROLL_LEFT, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
         <autogen>
           __KeyToKey__
           {{ VI_J }},
-          KeyCode::VK_MOUSEKEY_SCROLL_DOWN, ModifierFlag::MOUSE_KEYS_MODE_2,
+          KeyCode::VK_MOUSEKEY_SCROLL_DOWN, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
         <autogen>
           __KeyToKey__
           {{ VI_K }},
-          KeyCode::VK_MOUSEKEY_SCROLL_UP, ModifierFlag::MOUSE_KEYS_MODE_2,
+          KeyCode::VK_MOUSEKEY_SCROLL_UP, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
         <autogen>
           __KeyToKey__
           {{ VI_L }},
-          KeyCode::VK_MOUSEKEY_SCROLL_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_2,
+          KeyCode::VK_MOUSEKEY_SCROLL_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
       </block>
 
       <!-- mouse move -->
-      <autogen>__KeyToKey__ {{ VI_H }}, KeyCode::VK_MOUSEKEY_LEFT,  ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
-      <autogen>__KeyToKey__ {{ VI_J }}, KeyCode::VK_MOUSEKEY_DOWN,  ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
-      <autogen>__KeyToKey__ {{ VI_K }}, KeyCode::VK_MOUSEKEY_UP,    ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
-      <autogen>__KeyToKey__ {{ VI_L }}, KeyCode::VK_MOUSEKEY_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
+      <autogen>__KeyToKey__ {{ VI_H }}, KeyCode::VK_MOUSEKEY_LEFT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ {{ VI_J }}, KeyCode::VK_MOUSEKEY_DOWN,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ {{ VI_K }}, KeyCode::VK_MOUSEKEY_UP,    ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ {{ VI_L }}, KeyCode::VK_MOUSEKEY_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- other -->
-      <autogen>__KeyToKey__ KeyCode::S, KeyCode::VK_MODIFIER_MOUSE_KEYS_MODE_2_SCROLL, ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
-      <autogen>__KeyToKey__ KeyCode::F, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
+      <autogen>__KeyToKey__ KeyCode::S, KeyCode::VK_MODIFIER_MOUSE_KEYS_MODE_3_SCROLL, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::F, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- click -->
-      <autogen>__KeyToKey__ KeyCode::V, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
-      <autogen>__KeyToKey__ KeyCode::B, PointingButton::MIDDLE, ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
-      <autogen>__KeyToKey__ KeyCode::N, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_2</autogen>
+      <autogen>__KeyToKey__ KeyCode::V, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::B, PointingButton::MIDDLE, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::N, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- warp cursor position -->
       <autogen>__KeyToKey__ KeyCode::I, KeyCode::VK_OPEN_URL_SHELL_warp_mouse_cursor_position_front_window_center</autogen>
 
       <autogen>
         __DropAllKeys__
-        ModifierFlag::MOUSE_KEYS_MODE_2,
+        ModifierFlag::MOUSE_KEYS_MODE_3,
 
         Option::DROPALLKEYS_DROP_KEY,
       </autogen>
