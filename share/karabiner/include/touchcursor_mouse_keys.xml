@@ -64,6 +64,8 @@
       <appendix>* D+F+S+IJKL: High-speed scroll wheel.</appendix>
       <appendix></appendix>
       <appendix>Click by:</appendix>
+      <appendix>* D+M: Left click.</appendix>
+      <appendix>* D+P: Right click.</appendix>
       <appendix>* D+V: Left click.</appendix>
       <appendix>* D+B: Middle click.</appendix>
       <appendix>* D+N: Right click.</appendix>
@@ -138,6 +140,9 @@
       <autogen>__KeyToKey__ KeyCode::F, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- click -->
+      <autogen>__KeyToKey__ KeyCode::M, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::P, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+
       <autogen>__KeyToKey__ KeyCode::V, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
       <autogen>__KeyToKey__ KeyCode::B, PointingButton::MIDDLE, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
       <autogen>__KeyToKey__ KeyCode::N, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
