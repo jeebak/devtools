@@ -58,19 +58,25 @@
       <appendix></appendix>
       <appendix>To scroll: U(left) O(right) H(up) N(down).</appendix>
       <appendix></appendix>
-      <appendix>Use F key to increase speed. ("F"ast)</appendix>
-      <appendix>* D+F+IJKL: High-speed movement.</appendix>
-      <appendix>* D+F+S+IJKL: High-speed scroll wheel.</appendix>
+      <appendix>Use A key to increase speed. ("A"ccelerdte)</appendix>
+      <appendix>* D+A+IJKL: High-speed movement.</appendix>
+      <appendix>* D+A+UOHN: High-speed scroll wheel.</appendix>
       <appendix></appendix>
       <appendix>Click by:</appendix>
       <appendix>* D+M: Left click.</appendix>
+      <appendix>* D+/: Middle click.</appendix>
       <appendix>* D+P: Right click.</appendix>
-      <appendix>* D+V: Left click.</appendix>
-      <appendix>* D+B: Middle click.</appendix>
-      <appendix>* D+N: Right click.</appendix>
+      <appendix>* D+;: Button 4.</appendix>
+      <appendix>* D+': Button 5.</appendix>
+
+      <appendix>* D+F: Left click.</appendix>
+      <appendix>* D+V: Middle click.</appendix>
+      <appendix>* D+S: Right click.</appendix>
+      <appendix>* D+G: Button 4.</appendix>
+      <appendix>* D+B: Button 5.</appendix>
       <appendix></appendix>
       <appendix>Warp cursor position:</appendix>
-      <appendix>* D+;: Move mouse cursor to the center of the frontmost app's window.</appendix>
+      <appendix>* D+.: Move mouse cursor to the center of the frontmost app's window.</appendix>
       <identifier>remap.mouse_keys_mode_3</identifier>
 
       {{ MOUSE_KEYS_MODE_3_CONDITION }}
@@ -134,18 +140,24 @@
       <autogen>__KeyToKey__ KeyCode::L, KeyCode::VK_MOUSEKEY_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- other -->
-      <autogen>__KeyToKey__ KeyCode::F, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::A, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- click -->
       <autogen>__KeyToKey__ KeyCode::M, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::SLASH, PointingButton::MIDDLE,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
       <autogen>__KeyToKey__ KeyCode::P, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::SEMICOLON, PointingButton::BUTTON4,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::QUOTE, PointingButton::BUTTON5,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
-      <autogen>__KeyToKey__ KeyCode::V, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
-      <autogen>__KeyToKey__ KeyCode::B, PointingButton::MIDDLE, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
-      <autogen>__KeyToKey__ KeyCode::N, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::F, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::V, PointingButton::MIDDLE, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::S, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+
+      <autogen>__KeyToKey__ KeyCode::G, PointingButton::BUTTON4,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::B, PointingButton::BUTTON5,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- warp cursor position -->
-      <autogen>__KeyToKey__ KeyCode::SEMICOLON, KeyCode::VK_OPEN_URL_SHELL_warp_mouse_cursor_position_front_window_center</autogen>
+      <autogen>__KeyToKey__ KeyCode::DOT, KeyCode::VK_OPEN_URL_SHELL_warp_mouse_cursor_position_front_window_center</autogen>
 
       <autogen>
         __DropAllKeys__
