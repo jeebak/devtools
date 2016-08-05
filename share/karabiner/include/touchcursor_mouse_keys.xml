@@ -34,7 +34,7 @@
   </replacementdef>
 
   <item>
-    <name>My TouchCursor Mouse Keys</name>
+    <name>My MouseCursor</name>
     <item>
       <name style="important">Important:</name>
       <appendix>At least one pointing device must be connected when you use Mouse Keys.</appendix>
@@ -56,8 +56,7 @@
       <appendix>The ijkl keys also act as mouse keys when you hold d+ijkl keys down.</appendix>
       <appendix>(You can adjust timeout by "__BlockUntilKeyUp__ Timeout" in Parameters tab.</appendix>
       <appendix></appendix>
-      <appendix>Use S key to enable scroll. ("S"croll)</appendix>
-      <appendix>* D+S+IJKL: Scroll wheel.</appendix>
+      <appendix>To scroll: U(left) O(right) H(up) N(down).</appendix>
       <appendix></appendix>
       <appendix>Use F key to increase speed. ("F"ast)</appendix>
       <appendix>* D+F+IJKL: High-speed movement.</appendix>
@@ -71,7 +70,7 @@
       <appendix>* D+N: Right click.</appendix>
       <appendix></appendix>
       <appendix>Warp cursor position:</appendix>
-      <appendix>* D+I: Move mouse cursor to the center of the frontmost app's window.</appendix>
+      <appendix>* D+;: Move mouse cursor to the center of the frontmost app's window.</appendix>
       <identifier>remap.mouse_keys_mode_3</identifier>
 
       {{ MOUSE_KEYS_MODE_3_CONDITION }}
@@ -106,25 +105,24 @@
 
       <!-- scroll -->
       <block>
-        <modifier_only>ModifierFlag::MOUSE_KEYS_MODE_3_SCROLL</modifier_only>
         <autogen>
           __KeyToKey__
-          KeyCode::J,
+          KeyCode::O,
           KeyCode::VK_MOUSEKEY_SCROLL_LEFT, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
         <autogen>
           __KeyToKey__
-          KeyCode::I,
+          KeyCode::H,
           KeyCode::VK_MOUSEKEY_SCROLL_DOWN, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
         <autogen>
           __KeyToKey__
-          KeyCode::K,
+          KeyCode::N,
           KeyCode::VK_MOUSEKEY_SCROLL_UP, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
         <autogen>
           __KeyToKey__
-          KeyCode::L,
+          KeyCode::U,
           KeyCode::VK_MOUSEKEY_SCROLL_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_3,
         </autogen>
       </block>
@@ -136,7 +134,6 @@
       <autogen>__KeyToKey__ KeyCode::L, KeyCode::VK_MOUSEKEY_RIGHT, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- other -->
-      <autogen>__KeyToKey__ KeyCode::S, KeyCode::VK_MODIFIER_MOUSE_KEYS_MODE_3_SCROLL, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
       <autogen>__KeyToKey__ KeyCode::F, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- click -->
