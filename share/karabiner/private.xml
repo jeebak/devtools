@@ -1,10 +1,12 @@
 <?xml version="1.0"?>
 <root>
 
-  <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/mytouchcursor.xml" />
 
   <item>
     <name>My Extras</name>
+
+    <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/mytouchcursor.xml" />
+    <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/touchcursor_mouse_keys.xml" />
 
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/jeebak-escape_tap_hold_control.xml" />
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/jeebak-tap_right_shift_to_enter.xml" />
