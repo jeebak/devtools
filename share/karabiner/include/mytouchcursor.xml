@@ -83,20 +83,21 @@
       -->
 
       <!-- T: Tilde / B: Backtick  -->
+      <autogen>__KeyToKey__ KeyCode::T, KeyCode::BACKQUOTE, ModifierFlag::SHIFT_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::B, KeyCode::BACKQUOTE</autogen>
+
+      <!-- Virtual Desktop Switching: Left/Right -->
       <autogen>
-        --KeyToKey--
-        KeyCode::T,
-        KeyCode::BACKQUOTE, ModifierFlag::SHIFT_L
+        __KeyToKey__ KeyCode::SEMICOLON,
+        KeyCode::SEMICOLON, ModifierFlag::COMMAND_L | ModifierFlag::CONTROL_L
       </autogen>
+
       <autogen>
-        --KeyToKey--
-        KeyCode::B,
-        KeyCode::BACKQUOTE
+        __KeyToKey__ KeyCode::QUOTE,
+        KeyCode::QUOTE, ModifierFlag::COMMAND_L | ModifierFlag::CONTROL_L
       </autogen>
 
       <!--
-      <autogen>__KeyToKey__ KeyCode::COLON, ... </autogen>
-      <autogen>__KeyToKey__ KeyCode::QUOTE, ... </autogen>
       <autogen>__KeyToKey__ KeyCode::COMMA, ... </autogen>
       <autogen>__KeyToKey__ KeyCode::DOT, ...   </autogen>
       -->
