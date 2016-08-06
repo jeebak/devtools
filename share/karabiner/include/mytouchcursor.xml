@@ -7,7 +7,7 @@
 
       Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
     -->
-    <name>My TouchCursor</name>
+    <name>Layer Space: TouchCursor</name>
 
     <item>
       <name>MyTouchCursor, based on: http://touchcursor.sourceforge.net/</name>
