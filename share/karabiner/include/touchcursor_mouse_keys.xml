@@ -43,38 +43,29 @@
 
     <item>
       <name>Mouse Keys Mode v3</name>
-      <appendix>You can move mouse pointer by d+ijkl keys, and scroll by d+s+ijkl keys.</appendix>
-      <appendix></appendix>
-      <appendix>Usage:</appendix>
-      <appendix></appendix>
+      <appendix>You can move mouse pointer by d+ijkl keys.</appendix>
       <appendix>Move pointer by:</appendix>
       <appendix><![CDATA[  * Left: D down -> J down -> J up  ]]></appendix>
       <appendix><![CDATA[  * Down: D down -> K down -> K up  ]]></appendix>
       <appendix><![CDATA[  * Up: D down -> I down -> I up  ]]></appendix>
       <appendix><![CDATA[  * Right: D down -> L down -> L up  ]]></appendix>
-      <appendix></appendix>
+      <appendix>───────────────────────────────────────</appendix>
       <appendix>The ijkl keys also act as mouse keys when you hold d+ijkl keys down.</appendix>
       <appendix>(You can adjust timeout by "__BlockUntilKeyUp__ Timeout" in Parameters tab.</appendix>
-      <appendix></appendix>
+      <appendix>───────────────────────────────────────</appendix>
       <appendix>To scroll: U(left) O(right) H(up) N(down).</appendix>
-      <appendix></appendix>
+      <appendix>───────────────────────────────────────</appendix>
       <appendix>Use A key to increase speed. ("A"ccelerdte)</appendix>
       <appendix>* D+A+IJKL: High-speed movement.</appendix>
       <appendix>* D+A+UOHN: High-speed scroll wheel.</appendix>
-      <appendix></appendix>
+      <appendix>───────────────────────────────────────</appendix>
       <appendix>Click by:</appendix>
-      <appendix>* D+M: Left click.</appendix>
-      <appendix>* D+/: Middle click.</appendix>
-      <appendix>* D+P: Right click.</appendix>
-      <appendix>* D+;: Button 4.</appendix>
-      <appendix>* D+': Button 5.</appendix>
-
-      <appendix>* D+F: Left click.</appendix>
-      <appendix>* D+V: Middle click.</appendix>
-      <appendix>* D+S: Right click.</appendix>
-      <appendix>* D+G: Button 4.</appendix>
-      <appendix>* D+B: Button 5.</appendix>
-      <appendix></appendix>
+      <appendix>Left click:      D+M or D+F</appendix>
+      <appendix>Middle click: D+/   or D+V</appendix>
+      <appendix>Right click:    D+P  or D+S</appendix>
+      <appendix>Button 4:       D+;   or D+G</appendix>
+      <appendix>Button 5:       D+'    or D+B</appendix>
+      <appendix>───────────────────────────────────────</appendix>
       <appendix>Warp cursor position:</appendix>
       <appendix>* D+.: Move mouse cursor to the center of the frontmost app's window.</appendix>
       <identifier>remap.mouse_keys_mode_3</identifier>
