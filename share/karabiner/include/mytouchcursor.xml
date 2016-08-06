@@ -87,20 +87,13 @@
       <autogen>__KeyToKey__ KeyCode::B, KeyCode::BACKQUOTE</autogen>
 
       <!-- Virtual Desktop Switching: Left/Right -->
-      <autogen>
-        __KeyToKey__ KeyCode::SEMICOLON,
-        KeyCode::SEMICOLON, ModifierFlag::COMMAND_L | ModifierFlag::CONTROL_L
-      </autogen>
+      <autogen>__KeyToKey__ KeyCode::SEMICOLON, KeyCode::SEMICOLON, ModifierFlag::COMMAND_L | ModifierFlag::CONTROL_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::QUOTE,     KeyCode::QUOTE,     ModifierFlag::COMMAND_L | ModifierFlag::CONTROL_L</autogen>
 
-      <autogen>
-        __KeyToKey__ KeyCode::QUOTE,
-        KeyCode::QUOTE, ModifierFlag::COMMAND_L | ModifierFlag::CONTROL_L
-      </autogen>
-
-      <!--
-      <autogen>__KeyToKey__ KeyCode::COMMA, ... </autogen>
-      <autogen>__KeyToKey__ KeyCode::DOT, ...   </autogen>
-      -->
+      <!-- Tab Close, New, Reopen -->
+      <autogen>__KeyToKey__ KeyCode::D,     KeyCode::W, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::COMMA, KeyCode::T, ModifierFlag::COMMAND_L</autogen>
+      <autogen>__KeyToKey__ KeyCode::DOT,   KeyCode::T, ModifierFlag::COMMAND_L | ModifierFlag::SHIFT_L</autogen>
 
       <!-- /: Command-/ (Undocumented :) -->
       <autogen>__KeyToKey__ KeyCode::SLASH, KeyCode::SLASH, ModifierFlag::COMMAND_L </autogen>
@@ -145,6 +138,10 @@
       <appendix>───────────────────────────────────────</appendix>
       <appendix>FGY: ⌘-[fgy] (Find, Find Again, Redo)</appendix>
       <appendix>ZXCV: ⌘-[zxcv] (Undo, Cut, Copy, Paste)</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>[;']: ⌘-⌃[;'] (Virtual Desktop Left/Right)</appendix>
+      <appendix>───────────────────────────────────────</appendix>
+      <appendix>[D,.]: ⌘-[wtT] (Tab Close, New, Reopen)</appendix>
 
       <identifier>remap.mytouchcursor</identifier>
       <autogen>
