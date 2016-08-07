@@ -14,7 +14,7 @@
       <appendix>Tap Escape key for Escape; Hold Escape for Control</appendix>
       <identifier>remap.escape_tap_hold_control</identifier>
       <autogen>
-        --KeyOverlaidModifier--
+        __KeyOverlaidModifier__
         KeyCode::ESCAPE,
         KeyCode::CONTROL_L,
         KeyCode::ESCAPE
@@ -44,7 +44,43 @@
       <appendix>Right shift key returns when tapped. When used with other keys they act as normal shifts.</appendix>
       <identifier>private.right_shifts_to_enter</identifier>
 
-      <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::ENTER</autogen>
+      <autogen>__KeyOverlaidModifier__ KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::ENTER</autogen>
+    </item>
+
+    <item>
+      <name>Home Row Mod Keys: Tap for (;), hold for (⌘), Tap for ('), hold for (⌥)</name>
+      <identifier>private.home_row_to_mod_keys</identifier>
+
+      <modifierdef>SEMICOLON_TO_COMMAND</modifierdef>
+      <modifierdef>QUOTE_TO_OPTION</modifierdef>
+
+      <autogen>
+        __KeyOverlaidModifier__
+        KeyCode::SEMICOLON,
+
+        KeyCode::VK_LAZY_COMMAND_L, ModifierFlag::SEMICOLON_TO_COMMAND,
+
+        KeyCode::SEMICOLON,
+      </autogen>
+
+      <block>
+        <modifier_only>ModifierFlag::SEMICOLON_TO_COMMAND</modifier_only>
+        <autogen>__BlockUntilKeyUp__ KeyCode::SEMICOLON</autogen>
+      </block>
+
+      <autogen>
+        __KeyOverlaidModifier__
+        KeyCode::QUOTE,
+
+        KeyCode::VK_LAZY_OPTION_L, ModifierFlag::QUOTE_TO_OPTION,
+
+        KeyCode::QUOTE,
+      </autogen>
+
+      <block>
+        <modifier_only>ModifierFlag::QUOTE_TO_OPTION</modifier_only>
+        <autogen>__BlockUntilKeyUp__ KeyCode::QUOTE</autogen>
+      </block>
     </item>
 
 </root>
