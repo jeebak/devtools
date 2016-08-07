@@ -1,0 +1,50 @@
+<?xml version="1.0"?>
+<root>
+    <!--
+      Include this file from your private.xml: <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/name-of-this-file.xml" />
+
+      Based on: https://github.com/jasonrudolph/keyboard
+    -->
+    <item>
+      <!--
+        Inspired by and adapted from Steve Losh's "Modern Space Cadet" post:
+        http://stevelosh.com/blog/2012/10/a-modern-space-cadet/#controlescape
+      -->
+      <name>Escape key: Tap Escape/Hold Control</name>
+      <appendix>Tap Escape key for Escape; Hold Escape for Control</appendix>
+      <identifier>remap.escape_tap_hold_control</identifier>
+      <autogen>
+        --KeyOverlaidModifier--
+        KeyCode::ESCAPE,
+        KeyCode::CONTROL_L,
+        KeyCode::ESCAPE
+      </autogen>
+    </item>
+
+    <item>
+      <name>F19 to Control</name>
+      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19.)</appendix>
+      <identifier>private.f19_to_control</identifier>
+      <autogen>__KeyToKey__ KeyCode::F19, KeyCode::CONTROL_L</autogen>
+    </item>
+
+    <item>
+      <name>F19 to CapsLock</name>
+      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19.)</appendix>
+      <identifier>private.f19_to_capslock</identifier>
+      <autogen>__KeyToKey__ KeyCode::F19, KeyCode::CAPSLOCK</autogen>
+    </item>
+
+    <!--
+      Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
+      Useful to match behavior on personalized Planck keymap
+    -->
+    <item>
+      <name>Right Shift: Tap to enter, hold to shift</name>
+      <appendix>Right shift key returns when tapped. When used with other keys they act as normal shifts.</appendix>
+      <identifier>private.right_shifts_to_enter</identifier>
+
+      <autogen>--KeyOverlaidModifier-- KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::ENTER</autogen>
+    </item>
+
+</root>
