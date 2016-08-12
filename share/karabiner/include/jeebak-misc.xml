@@ -48,7 +48,8 @@
     </item>
 
     <item>
-      <name>Home Row Mod Keys: Tap for (;), hold for (⌘), Tap for ('), hold for (⌥)</name>
+      <name>Home Row Mod Keys: Tap for [;], hold for [⌘], Tap for ['], hold for [⌥]</name>
+      <appendix>Pair these with the "F19 to Escape and Control" preset, and you've got Home Row Gold!</appendix>
       <identifier>private.home_row_to_mod_keys</identifier>
 
       <modifierdef>SEMICOLON_TO_COMMAND</modifierdef>
