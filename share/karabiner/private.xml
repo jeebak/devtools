@@ -5,6 +5,7 @@
   <item>
     <name>My Extras</name>
 
+    <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/home_row_modifiers.xml" />
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/mytouchcursor.xml" />
     <include once="true" path="{{ ENV_HOME }}/Library/Application Support/Karabiner/include/touchcursor_mouse_keys.xml" />
 

@@ -21,20 +21,6 @@
       </autogen>
     </item>
 
-    <item>
-      <name>F19 to Control</name>
-      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19.)</appendix>
-      <identifier>private.f19_to_control</identifier>
-      <autogen>__KeyToKey__ KeyCode::F19, KeyCode::CONTROL_L</autogen>
-    </item>
-
-    <item>
-      <name>F19 to CapsLock</name>
-      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19.)</appendix>
-      <identifier>private.f19_to_capslock</identifier>
-      <autogen>__KeyToKey__ KeyCode::F19, KeyCode::CAPSLOCK</autogen>
-    </item>
-
     <!--
       Based on: https://msol.io/blog/tech/work-more-efficiently-on-your-mac-for-developers/
       Useful to match behavior on personalized Planck keymap
@@ -46,58 +32,4 @@
 
       <autogen>__KeyOverlaidModifier__ KeyCode::SHIFT_R, ModifierFlag::SHIFT_R | ModifierFlag::NONE, KeyCode::SHIFT_R, KeyCode::ENTER</autogen>
     </item>
-
-    <item>
-      <name>Home Row Mod Keys: Tap F19/CapsLock for Esc, hold for [⌃]. Tap for [;], hold for [⌘]. Tap for ['], hold for [⌥]</name>
-      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19 [code 80].)</appendix>
-      <appendix>Make sure that the "F19 to Escape and Control" preset is unchecked.</appendix>
-      <identifier>private.home_row_to_mod_keys</identifier>
-
-      <modifierdef>F19_TO_CONTROL</modifierdef>
-      <modifierdef>SEMICOLON_TO_COMMAND</modifierdef>
-      <modifierdef>QUOTE_TO_OPTION</modifierdef>
-
-      <autogen>
-        __KeyOverlaidModifier__
-        KeyCode::F19,
-
-        KeyCode::VK_LAZY_CONTROL_L, ModifierFlag::F19_TO_CONTROL,
-
-        KeyCode::ESCAPE,
-      </autogen>
-
-      <block>
-        <modifier_only>ModifierFlag::F19_TO_CONTROL</modifier_only>
-        <autogen>__BlockUntilKeyUp__ KeyCode::F19</autogen>
-      </block>
-
-      <autogen>
-        __KeyOverlaidModifier__
-        KeyCode::SEMICOLON,
-
-        KeyCode::VK_LAZY_COMMAND_L, ModifierFlag::SEMICOLON_TO_COMMAND,
-
-        KeyCode::SEMICOLON,
-      </autogen>
-
-      <block>
-        <modifier_only>ModifierFlag::SEMICOLON_TO_COMMAND</modifier_only>
-        <autogen>__BlockUntilKeyUp__ KeyCode::SEMICOLON</autogen>
-      </block>
-
-      <autogen>
-        __KeyOverlaidModifier__
-        KeyCode::QUOTE,
-
-        KeyCode::VK_LAZY_OPTION_L, ModifierFlag::QUOTE_TO_OPTION,
-
-        KeyCode::QUOTE,
-      </autogen>
-
-      <block>
-        <modifier_only>ModifierFlag::QUOTE_TO_OPTION</modifier_only>
-        <autogen>__BlockUntilKeyUp__ KeyCode::QUOTE</autogen>
-      </block>
-    </item>
-
 </root>
