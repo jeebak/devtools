@@ -48,12 +48,28 @@
     </item>
 
     <item>
-      <name>Home Row Mod Keys: Tap for [;], hold for [⌘], Tap for ['], hold for [⌥]</name>
-      <appendix>Pair these with the "F19 to Escape and Control" preset, and you've got Home Row Gold!</appendix>
+      <name>Home Row Mod Keys: Tap F19/CapsLock for Esc, hold for [⌃]. Tap for [;], hold for [⌘]. Tap for ['], hold for [⌥]</name>
+      <appendix>(Recommendation: Use Seil to remap Caps Lock to F19 [code 80].)</appendix>
+      <appendix>Make sure that the "F19 to Escape and Control" preset is unchecked.</appendix>
       <identifier>private.home_row_to_mod_keys</identifier>
 
+      <modifierdef>F19_TO_CONTROL</modifierdef>
       <modifierdef>SEMICOLON_TO_COMMAND</modifierdef>
       <modifierdef>QUOTE_TO_OPTION</modifierdef>
+
+      <autogen>
+        __KeyOverlaidModifier__
+        KeyCode::F19,
+
+        KeyCode::VK_LAZY_CONTROL_L, ModifierFlag::F19_TO_CONTROL,
+
+        KeyCode::ESCAPE,
+      </autogen>
+
+      <block>
+        <modifier_only>ModifierFlag::F19_TO_CONTROL</modifier_only>
+        <autogen>__BlockUntilKeyUp__ KeyCode::F19</autogen>
+      </block>
 
       <autogen>
         __KeyOverlaidModifier__
