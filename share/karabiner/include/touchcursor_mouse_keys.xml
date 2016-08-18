@@ -144,8 +144,8 @@
       <autogen>__KeyToKey__ KeyCode::V, PointingButton::MIDDLE, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
       <autogen>__KeyToKey__ KeyCode::S, PointingButton::RIGHT,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
-      <autogen>__KeyToKey__ KeyCode::G, PointingButton::BUTTON4,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
-      <autogen>__KeyToKey__ KeyCode::B, PointingButton::BUTTON5,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::W, PointingButton::BUTTON4,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::R, PointingButton::BUTTON5,  ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
 
       <!-- warp cursor position -->
       <autogen>__KeyToKey__ KeyCode::DOT, KeyCode::VK_OPEN_URL_SHELL_warp_mouse_cursor_position_front_window_center</autogen>
