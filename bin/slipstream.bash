@@ -393,6 +393,7 @@ if [[ ! -f /etc/php.ini ]]; then
     s|pdo_mysql.default_socket=|pdo_mysql.default_socket="/tmp/mysql.sock"|
     s|mysql.default_socket =|mysql.default_socket = "/tmp/mysql.sock"|
     s|mysqli.default_socket =|mysqli.default_socket = "/tmp/mysql.sock"|
+    s|upload_max_filesize = 2M|upload_max_filesize = 100M|
   ' /etc/php.ini
   sudo rm /etc/php.ini.bak
 
@@ -583,6 +584,7 @@ for i in /usr/local/etc/php/*/php.ini; do
       s|pdo_mysql.default_socket=|pdo_mysql.default_socket="/tmp/mysql.sock"|
       s|mysql.default_socket =|mysql.default_socket = "/tmp/mysql.sock"|
       s|mysqli.default_socket =|mysqli.default_socket = "/tmp/mysql.sock"|
+      s|upload_max_filesize = 2M|upload_max_filesize = 100M|
     ' "/etc/homebrew/etc/php/$version/php.ini"
     sudo rm "/etc/homebrew/etc/php/$version/php.ini.bak"
 
