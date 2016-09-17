@@ -333,7 +333,7 @@ function accpl.bdeps() {
 
   while read -r cask; do
     echo "${yellow}${cask}:${magenta}" $(brew deps "$cask") "${reset_colors}"
-  done <<< "$(brew list)"
+  done <<< "$([[ $# -ne 0 ]] && echo "$@" || brew list)"
 }
 
 function accpl.buses() {
@@ -341,7 +341,7 @@ function accpl.buses() {
 
   while read -r cask; do
     echo "${yellow}${cask}:${magenta}" $(brew uses --installed "$cask") "${reset_colors}"
-  done <<< "$(brew list)"
+  done <<< "$([[ $# -ne 0 ]] && echo "$@" || brew list)"
 }
 
 function accpl.sphp() {
