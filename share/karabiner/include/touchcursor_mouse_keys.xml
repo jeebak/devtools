@@ -66,6 +66,8 @@
       <appendix>Button 4:       D+;   or D+G</appendix>
       <appendix>Button 5:       D+'    or D+B</appendix>
       <appendix>───────────────────────────────────────</appendix>
+      <appendix>C: repeatable "D"</appendix>
+      <appendix>───────────────────────────────────────</appendix>
       <appendix>Warp cursor position:</appendix>
       <appendix>* D+.: Move mouse cursor to the center of the frontmost app's window.</appendix>
       <identifier>remap.mouse_keys_mode_3</identifier>
@@ -132,6 +134,7 @@
 
       <!-- other -->
       <autogen>__KeyToKey__ KeyCode::A, KeyCode::VK_MOUSEKEY_HIGHSPEED, ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
+      <autogen>__KeyToKey__ KeyCode::C, KeyCode::D</autogen>
 
       <!-- click -->
       <autogen>__KeyToKey__ KeyCode::M, PointingButton::LEFT,   ModifierFlag::MOUSE_KEYS_MODE_3</autogen>
