@@ -105,7 +105,7 @@ function process() {
         $debug brew install $line;;
       'brew php')
         line="$(egrep "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
-        brew_php_linked="$(cd /usr/local/Library/LinkedKegs && qte ls -d php[57][0-9])"
+        brew_php_linked="$(cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
         if [[ ! -z "$brew_php_linked" ]]; then
           if [[ "$line" != "$brew_php_linked"* ]]; then
             brew unlink "$brew_php_linked"
@@ -696,7 +696,7 @@ EOT
 done
 
 # Make php56 the default
-brew_php_linked="$(cd /usr/local/Library/LinkedKegs && qte ls -d php[57][0-9])"
+brew_php_linked="$(cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite php56
