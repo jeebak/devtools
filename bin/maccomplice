@@ -382,7 +382,10 @@ function accpl.sphp() {
     accpl.__brew link --overwrite "php${newversion}"
 
     if accpl.__brew services list | egrep "^(php${currentversion}|php${newversion})" 2> /dev/null > /dev/null; then
-      accpl.__brew services stop  "php${currentversion}"
+      while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
+        brew services stop "$service"
+      done 3< <(brew services list | egrep '^php[57]' | grep ' started ')
+
       accpl.__brew services start "php${newversion}"
       accpl.__brew services list
     else
