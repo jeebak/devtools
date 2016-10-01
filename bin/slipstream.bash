@@ -41,16 +41,17 @@ EOT
     die "Yikes! Please don't run this as root!" 127
   fi
 fi
-# -- CHECK MAC AND YOSEMITE ---------------------------------------------------
+# -- CHECK MAC AND VERSION ----------------------------------------------------
 if [[ $OSTYPE == darwin* ]]; then
   OSX_VERSION="$(sw_vers -productVersion)"
-  [[ "$OSX_VERSION" == 10.10* ]] || [[ "$OSX_VERSION" == 10.11* ]]
+  [[ "$OSX_VERSION" =~ 10.1[012] ]]
 
   if [[ $? -ne 0 ]]; then
     cat <<EOT
 Sorry! This script is currently only compatible with:
-  Yosemite   (10.10*) or
+  Yosemite   (10.10*)
   El Capitan (10.11*)
+  Sierra     (10.12*)
 You're running:
 
 $(sw_vers)
@@ -105,7 +106,7 @@ function process() {
         $debug brew install $line;;
       'brew php')
         line="$(egrep "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
-        brew_php_linked="$(cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
+        brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
         if [[ ! -z "$brew_php_linked" ]]; then
           if [[ "$line" != "$brew_php_linked"* ]]; then
             brew unlink "$brew_php_linked"
@@ -123,7 +124,9 @@ function process() {
         fi
 
         # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
-        [[ "$OSX_VERSION" == 10.11* ]] && extra='-n /usr/local/bin'
+        if qt command -v csrutil && csrutil status | qt grep enabled; then
+          extra='-n /usr/local/bin'
+        fi
 
         line="$(egrep "^$line[ ]*.*$" <(get_pkgs "$1"))"
         $debug $SUDO "$1" install -f $extra $line;;
@@ -171,9 +174,6 @@ function genssl() {
   local domain C ST L O OU CN emailAddress password
 
   domain=server
-  # Change to your company details
-  C=US;  ST=Oregon;  L=Portland; O=$domain; # Country, State, Locality, Organization
-  OU=IT; CN=$domain; emailAddress="$USER@localhost"
 
   # Change to your company details (NOTE: CN should match Apache ServerName value
   C=US;  ST=Oregon;  L=Portland; O=$domain; # Country, State, Locality, Organization
@@ -205,9 +205,9 @@ cat <<EOT
 
 OK. It looks like we're ready to go.
 *******************************************************************************
-***** NOTE: This script assumes a "pristine" installation  of Yosemite or *****
-***** El Capitan state. If you've already made changes to files in /etc,  *****
-***** then all bets are off. You have been WARNED!                        *****
+***** NOTE: This script assumes a "pristine" installation of Yosemite,    *****
+***** El Capitan, or Sierra. If you've already made changes to files in   *****
+***** /etc, then all bets are off. You have been WARNED!                  *****
 *******************************************************************************
 If you wish to continue, then this is what I'll be doing:
   - Git-ifying your /etc folder
@@ -234,20 +234,19 @@ caffeinate -d -i -t 3600 &
 # Slipstream Git commit message prefix
 SGP='[Slipstream]'
 
-sudo -H bash -c "
+if [[ ! -f /etc/.git/config ]]; then
+  show_status "Git init-ing /etc [you may be prompted for sudo password]: "
+  sudo -H bash -c "
 [[ -z '$(git config --get user.name)'  ]] && git config --global user.name 'System Administrator'
 [[ -z '$(git config --get user.email)' ]] && git config --global user.email '$USER@localhost'"
 
-if [[ ! -f /etc/.git/config ]]; then
-  show_status "Git init-ing /etc [you may be prompted for sudo password]: "
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git init ; git add . ; git commit -m '${SGP} Initial commit' "
 fi
-
 # -- PASSWORDLESS SUDO --------------------------------------------------------
 if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
   show_status "Making sudo password-less for 'admin' group"
-  sudo sed -i .bak 's/\(%admin[[:space:]]*ALL=(ALL)\) ALL/\1 NOPASSWD: ALL/' /etc/sudoers
+  sudo sed -i .bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
 
   if qt /etc/sudoers /etc/sudoers.bak; then
     echo "No change made to: /etc/sudoers"
@@ -267,6 +266,11 @@ if ! qt command -v brew; then
 
   # TODO: test for errors
   brew doctor
+else
+  # There was a major(?) architecture change to homebrew around 2015-12(?)
+  if [[ ! -x /usr/local/sbin/php-fpm ]] || ! qt grep build_fpm /usr/local/Homebrew/Library/Taps/homebrew/homebrew-php/Abstract/abstract-php.rb; then
+    die "Hmm... no php-fpm. You man want to run: brew update; brew upgrade; and re-run this script when done" 127
+  fi
 fi
 
 show_status "brew tap"
@@ -371,35 +375,6 @@ if ! qt launchctl list homebrew.mxcl.mariadb; then
   sleep 7
   mysql -u root mysql <<< "UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES;"
 fi
-# -- SETUP SYSTEM PHP.INI -----------------------------------------------------
-echo "== Processing system php.ini =="
-
-# php (cp php.ini.default?)
-if [[ ! -f /etc/php.ini ]]; then
-  show_status 'Copying Default System Php.ini'
-  sudo cp /etc/php.ini.default /etc/php.ini
-
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add php.ini ; git commit -m '${SGP} Add system /etc/php.ini as copy of the default' "
-
-  show_status 'Updating some system PHP settings'
-  sudo sed -i .bak '
-    s|max_execution_time = 30|max_execution_time = 0|
-    s|memory_limit = 128M|memory_limit = 256M|
-    s|display_errors = Off|display_errors = On|
-    s|display_startup_errors = Off|display_startup_errors = On|
-    s|;error_log = php_errors.log|error_log = /var/log/apache2/php_errors.log|
-    s|;date.timezone =|date.timezone = America/Los_Angeles|
-    s|pdo_mysql.default_socket=|pdo_mysql.default_socket="/tmp/mysql.sock"|
-    s|mysql.default_socket =|mysql.default_socket = "/tmp/mysql.sock"|
-    s|mysqli.default_socket =|mysqli.default_socket = "/tmp/mysql.sock"|
-    s|upload_max_filesize = 2M|upload_max_filesize = 100M|
-  ' /etc/php.ini
-  sudo rm /etc/php.ini.bak
-
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add php.ini ; git commit -m '${SGP} Update system php.ini' "
-fi
 # -- SETUP APACHE -------------------------------------------------------------
 echo "== Processing Apache =="
 
@@ -413,7 +388,8 @@ for i in \
   'LoadModule vhost_alias_module libexec/apache2/mod_vhost_alias.so' \
   'LoadModule actions_module libexec/apache2/mod_actions.so' \
   'LoadModule rewrite_module libexec/apache2/mod_rewrite.so' \
-  'LoadModule php5_module libexec/apache2/libphp5.so' \
+  'LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so' \
+  'LoadModule proxy_module libexec/apache2/mod_proxy.so' \
 ; do
   sudo sed -i .bak "s;#$i;$i;" /etc/apache2/httpd.conf
 done
@@ -435,8 +411,8 @@ if [[ ! -d "/etc/apache2/ssl" ]]; then
   sudo -H bash -c " cd /etc/ ; git add apache2/ssl; git commit -m '${SGP} Add apache2/ssl files' "
 fi
 
-if [[ ! -f /etc/apache2/extra/dev.conf ]]; then
-  cat <<EOT | qt sudo tee -a /etc/apache2/extra/dev.conf
+if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep php-fpm /etc/apache2/extra/dev.conf; then
+  cat <<EOT | qt sudo tee /etc/apache2/extra/dev.conf
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
   ServerAlias *.dev *.vmdev
@@ -447,6 +423,26 @@ if [[ ! -f /etc/apache2/extra/dev.conf ]]; then
   LogFormat "%V %h %l %u %t \"%r\" %s %b" vcommon
   CustomLog "/var/log/apache2/access_log" vcommon
   ErrorLog "/var/log/apache2/error_log"
+
+  # With the switch to php-fpm, the apache2/other/php5.conf is not "Include"-ed, so need to...
+  AddType application/x-httpd-php .php
+  AddType application/x-httpd-php-source .phps
+
+  <IfModule dir_module>
+    DirectoryIndex index.html index.php
+  </IfModule>
+
+  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in /etc/apache2/httpd.conf
+  #   http://serverfault.com/a/672969
+  #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
+  # This is to forward all PHP to php-fpm.
+  <FilesMatch \.php$>
+    SetHandler "proxy:fcgi://localhost:9000/"
+  </FilesMatch>
+
+  <Proxy fcgi://localhost:9000>
+    ProxySet connectiontimeout=5 timeout=240
+  </Proxy>
 
   <Directory "$DEV_DIR">
     AllowOverride All
@@ -472,20 +468,42 @@ Listen 443
   CustomLog "/var/log/apache2/access_log" vcommon
   ErrorLog "/var/log/apache2/error_log"
 
+  # With the switch to php-fpm, the apache2/other/php5.conf is not "Include"-ed, so need to...
+  AddType application/x-httpd-php .php
+  AddType application/x-httpd-php-source .phps
+
+  <IfModule dir_module>
+    DirectoryIndex index.html index.php
+  </IfModule>
+
+  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in /etc/apache2/httpd.conf
+  #   http://serverfault.com/a/672969
+  #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
+  # This is to forward all PHP to php-fpm.
+  <FilesMatch \.php$>
+    SetHandler "proxy:fcgi://localhost:9000/"
+  </FilesMatch>
+
+  <Proxy fcgi://localhost:9000>
+    ProxySet connectiontimeout=5 timeout=240
+  </Proxy>
+
   <Directory "$DEV_DIR">
     AllowOverride All
     Options +Indexes +FollowSymLinks +ExecCGI
     Require all granted
     RewriteBase /
-
   </Directory>
 </VirtualHost>
 EOT
-  cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
+
+  if ! qt grep '^# Local vhost and ssl, for \*.dev$' /etc/apache2/httpd.conf; then
+    cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
 
 # Local vhost and ssl, for *.dev
 Include /private/etc/apache2/extra/dev.conf
 EOT
+  fi
 
   show_status 'Committing to git'
   sudo -H bash -c " cd /etc/ ; git add apache2/extra/dev.conf ; git commit -m '${SGP} Add apache2/extra/dev.conf' "
@@ -562,8 +580,17 @@ fi
 # -- SETUP BREW PHP.INI -------------------------------------------------------
 echo "== Processing Brew php.ini =="
 
+[[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
+
 for i in /usr/local/etc/php/*/php.ini; do
   version="$(basename "$(dirname "$i")")"
+  short_ver="${version//./}"
+
+  # brew info php${short_ver}
+  if qt ls /usr/local/opt/php${short_ver}/*.plist && ! qt ls ~/Library/LaunchAgents/homebrew.mxcl.php${short_ver}.plist; then
+    show_status "Linking php${short_ver} LaunchAgent plist"
+    ln -sfv /usr/local/opt/php${short_ver}/*.plist ~/Library/LaunchAgents/homebrew.mxcl.php${short_ver}.plist
+  fi
 
   if [[ ! -f "/etc/homebrew/etc/php/$version/php.ini" ]]; then
     show_status "Copying Default Brew PHP $version Php.ini"
@@ -601,48 +628,27 @@ done
 # -- SETUP BREW PHP / XDEBUG---------------------------------------------------
 echo "== Processing Brew PHP / Xdebug =="
 
-[[ ! -d /etc/homebrew/etc/apache2 ]] && sudo mkdir -p /etc/homebrew/etc/apache2
-
-if [[ ! -f /etc/homebrew/etc/apache2/php5.conf ]]; then
-  show_status 'Updating httpd.conf settings, to use brew php'
-  cat <<EOT | qt sudo tee /etc/homebrew/etc/apache2/php5.conf
-LoadModule php5_module /usr/local/lib/libphp5.so
-EOT
+if [[ -d /etc/homebrew/etc/apache2 ]]; then
+  show_status 'Deleting homebrew/etc/apache2 for switch to php-fpm'
+  sudo rm -rf /etc/homebrew/etc/apache2
+  show_status 'Committing to git'
+  sudo -H bash -c " cd /etc/ ; git rm -r homebrew/etc/apache2 ; git commit -m '${SGP} Deleting homebrew/etc/apache2 for switch to php-fpm' "
 fi
 
-if [[ ! -f /etc/homebrew/etc/apache2/php7.conf ]]; then
-  cat <<EOT | qt sudo tee /etc/homebrew/etc/apache2/php7.conf
-LoadModule php7_module /usr/local/lib/libphp7.so
-
-<IfModule php7_module>
-  AddType application/x-httpd-php .php
-  AddType application/x-httpd-php-source .phps
-
-  <IfModule dir_module>
-    DirectoryIndex index.html index.php
-  </IfModule>
-</IfModule>
-
-<FilesMatch \.php\$>
-  SetHandler application/x-httpd-php
-</FilesMatch>
-EOT
-fi
-
-[[ ! -d /usr/local/var/run/apache2 ]] && mkdir -p /usr/local/var/run/apache2
-if [[ -z "$(readlink /usr/local/var/run/apache2/php.conf)" ]]; then
-  ln -svf /etc/homebrew/etc/apache2/php5.conf /usr/local/var/run/apache2/php.conf
+if [[ -d /usr/local/var/run/apache2 ]]; then
+  rm -rf /usr/local/var/run/apache2
 fi
 
 # Account for both newly and previously provisioned scenarios
-sudo sed -i .bak "s;LoadModule php5_module libexec/apache2/libphp5.so;Include /usr/local/var/run/apache2/php.conf;" /etc/apache2/httpd.conf
-sudo sed -i .bak "s;LoadModule php5_module /usr/local/opt/php56/libexec/apache2/libphp5.so;Include /usr/local/var/run/apache2/php.conf ;" /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\);# \1;"                       /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*/usr/local/opt/php56/libexec/apache2/libphp5.so\);# \1;"  /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\(Include[[:space:]]\"*/usr/local/var/run/apache2/php.conf\);# \1;"                                      /etc/apache2/httpd.conf
 sudo rm /etc/apache2/httpd.conf.bak
 
 qt pushd /etc/
 if git status | qt egrep 'apache2/httpd.conf'; then
   show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf to use brew php' "
+  sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf to use brew php-fpm' "
 fi
 qt popd
 
@@ -695,15 +701,19 @@ EOT
   fi
 done
 
+while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
+  qte brew services stop "$service"
+done 3< <(brew services list | egrep '^php[57]' | grep ' started ')
+
 # Make php56 the default
-brew_php_linked="$(cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
+[[ ! -d /usr/local/var/log/ ]] && mkdir -p /usr/local/var/log/
+brew services start php56
+
+brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite php56
 fi
-
-[[ ! -e /usr/local/lib/libphp5.so ]] \
-  && ln -svf /usr/local/opt/php56/libexec/apache2/libphp5.so /usr/local/lib/libphp5.so
 
 # Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
 # keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
