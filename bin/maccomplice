@@ -381,14 +381,18 @@ function accpl.sphp() {
     errcho "Linking new binaries..."
     accpl.__brew link --overwrite "php${newversion}"
 
-    errcho "Linking new modphp addon..."
-    accpl.__verbose_run ln -svf "/usr/local/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "/usr/local/lib/libphp${shortNew}.so"
+    if accpl.__brew services list | egrep "^(php${currentversion}|php${newversion})" 2> /dev/null > /dev/null; then
+      accpl.__brew services stop  "php${currentversion}"
+      accpl.__brew services start "php${newversion}"
+      accpl.__brew services list
+    else
+      errcho "Linking new modphp addon..."
+      accpl.__verbose_run ln -svf "/usr/local/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "/usr/local/lib/libphp${shortNew}.so"
 
-    errcho "Fixing LoadModule..."
-    [[ ! -d "/usr/local/var/run/apache2" ]] && mkdir -p "/usr/local/var/run/apache2"
-    accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "/usr/local/var/run/apache2/php.conf"
-
-    errcho "Updating version file..."
+      errcho "Fixing LoadModule..."
+      [[ ! -d "/usr/local/var/run/apache2" ]] && mkdir -p "/usr/local/var/run/apache2"
+      accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "/usr/local/var/run/apache2/php.conf"
+    fi
 
     errcho "Restarting Apache..."
     accpl.ra
