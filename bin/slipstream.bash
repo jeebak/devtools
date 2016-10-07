@@ -79,7 +79,7 @@ function clean_up() {
   exit
 }
 
-trap clean_up EXIT INT QUIT KILL TERM
+trap clean_up EXIT INT QUIT TERM
 # -----------------------------------------------------------------------------
 # Strip out comments, beginning and trailing whitespace, [ :].*$, an blank lines
 function clean() {
@@ -166,6 +166,15 @@ function show_status() {
   echo "$(tput setaf 3)Working on: $(tput setaf 5)${@}$(tput sgr0)"
 }
 
+# Git commit /etc changes via sudo
+function etc_git_commit() {
+  local msg
+
+  msg="$2"
+  show_status 'Committing to git'
+  sudo -H bash -c " cd /etc/ ; $1 ; git commit -m '[Slipstream] $msg' "
+}
+
 # Generate self-signed SSL
 function genssl() {
   # http://www.jamescoyle.net/how-to/1073-bash-script-to-create-an-ssl-certificate-key-and-request-csr
@@ -231,28 +240,24 @@ caffeinate -d -i -t 3600 &
 # -- VERSION CONTROL /etc -----------------------------------------------------
 # We should have git available now, after installing Xcode cli tools
 
-# Slipstream Git commit message prefix
-SGP='[Slipstream]'
-
 if [[ ! -f /etc/.git/config ]]; then
   show_status "Git init-ing /etc [you may be prompted for sudo password]: "
   sudo -H bash -c "
 [[ -z '$(git config --get user.name)'  ]] && git config --global user.name 'System Administrator'
 [[ -z '$(git config --get user.email)' ]] && git config --global user.email '$USER@localhost'"
 
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git init ; git add . ; git commit -m '${SGP} Initial commit' "
+  etc_git_commit "git init"
+  etc_git_commit "git add ." "Initial commit"
 fi
 # -- PASSWORDLESS SUDO --------------------------------------------------------
 if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
   show_status "Making sudo password-less for 'admin' group"
   sudo sed -i .bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
 
-  if qt /etc/sudoers /etc/sudoers.bak; then
+  if qt diff /etc/sudoers /etc/sudoers.bak; then
     echo "No change made to: /etc/sudoers"
   else
-    show_status 'Committing to git'
-    sudo -H bash -c " cd /etc/ ; git add sudoers ; git commit -m '${SGP} Password-less sudo for \"admin\" group' "
+    etc_git_commit "git add sudoers" 'Password-less sudo for "admin" group'
   fi
 
   sudo rm -f /etc/sudoers.bak
@@ -261,15 +266,15 @@ fi
 echo "== Processing Homebrew =="
 
 if ! qt command -v brew; then
-  ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
   qt hash
 
   # TODO: test for errors
   brew doctor
 else
   # There was a major(?) architecture change to homebrew around 2015-12(?)
-  if [[ ! -x /usr/local/sbin/php-fpm ]] || ! qt grep build_fpm /usr/local/Homebrew/Library/Taps/homebrew/homebrew-php/Abstract/abstract-php.rb; then
-    die "Hmm... no php-fpm. You man want to run: brew update; brew upgrade; and re-run this script when done" 127
+  if ! brew --version | qt grep "Homebrew [>]*[^0]"; then
+    die "Hmm... Old version of brew detected. You may want to run: brew update; brew upgrade; and re-run this script when done" 127
   fi
 fi
 
@@ -314,8 +319,7 @@ fi
 
 qt pushd /etc/
 if git status | qt egrep 'postfix/main.cf|postfix/virtual'; then
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add postfix/main.cf postfix/virtual ; git commit -m '${SGP} Disable outgoing mail (postfix tweaks)' "
+  etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
 fi
 qt popd
 # -- INSTALL MARIADB (MYSQL) --------------------------------------------------
@@ -360,8 +364,7 @@ EOT
 
   show_status 'Linking to: /usr/local/etc/my.cnf.d/mysqld_innodb.cnf'
   ln -svf /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf /usr/local/etc/my.cnf.d/mysqld_innodb.cnf
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add homebrew ; git commit -m '${SGP} Add homebrew/etc/my.cnf.d/mysqld_innodb.cnf' "
+  etc_git_commit "git add homebrew" "Add homebrew/etc/my.cnf.d/mysqld_innodb.cnf"
 fi
 
 # TOOO: ps aux | grep mariadb and prehaps use nc to test if port is open
@@ -407,11 +410,25 @@ if [[ ! -d "/etc/apache2/ssl" ]]; then
   sudo chown -R root:wheel /etc/apache2/ssl
   rmdir "$$"
 
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add apache2/ssl; git commit -m '${SGP} Add apache2/ssl files' "
+  etc_git_commit "git add apache2/ssl" "Add apache2/ssl files"
 fi
 
-if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep php-fpm /etc/apache2/extra/dev.conf; then
+# Set a default value, if not set as an env
+PHP_FPM_PORT="${PHP_FPM_PORT:-9009}"
+
+# We'd use these if we want to use localhost:some_port, but the default port is 9000
+PHP_FPM_LISTEN="localhost:${PHP_FPM_PORT}"
+PHP_FPM_HANDLER="fcgi://${PHP_FPM_LISTEN}"
+PHP_FPM_PROXY="fcgi://${PHP_FPM_LISTEN}"
+
+# Since port 9000 is also the default port for xdebug, so lets use...
+PHP_FPM_LISTEN="/usr/local/var/run/php-fpm.sock"
+PHP_FPM_HANDLER="proxy:unix:$PHP_FPM_LISTEN|fcgi://localhost/"
+PHP_FPM_PROXY="fcgi://localhost/"
+
+[[ ! -d /usr/local/var/run ]] && mkdir -p /usr/local/var/run
+
+if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/dev.conf; then
   cat <<EOT | qt sudo tee /etc/apache2/extra/dev.conf
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
@@ -437,10 +454,10 @@ if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep php-fpm /etc/apache2/extr
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
   <FilesMatch \.php$>
-    SetHandler "proxy:fcgi://localhost:9000/"
+    SetHandler "${PHP_FPM_HANDLER}"
   </FilesMatch>
 
-  <Proxy fcgi://localhost:9000>
+  <Proxy ${PHP_FPM_PROXY}>
     ProxySet connectiontimeout=5 timeout=240
   </Proxy>
 
@@ -481,10 +498,10 @@ Listen 443
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
   <FilesMatch \.php$>
-    SetHandler "proxy:fcgi://localhost:9000/"
+    SetHandler "${PHP_FPM_HANDLER}"
   </FilesMatch>
 
-  <Proxy fcgi://localhost:9000>
+  <Proxy ${PHP_FPM_PROXY}>
     ProxySet connectiontimeout=5 timeout=240
   </Proxy>
 
@@ -505,8 +522,7 @@ Include /private/etc/apache2/extra/dev.conf
 EOT
   fi
 
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add apache2/extra/dev.conf ; git commit -m '${SGP} Add apache2/extra/dev.conf' "
+  etc_git_commit "git add apache2/extra/dev.conf" "Add apache2/extra/dev.conf"
 fi
 
 # Have ServerName match CN in SSL Cert
@@ -514,8 +530,7 @@ sudo sed -i .bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' /etc/a
 if qt diff /etc/apache2/httpd.conf /etc/apache2/httpd.conf.bak; then
   echo "No change made to: apache2/httpd.conf"
 else
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf' "
+  etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf"
 fi
 sudo rm /etc/apache2/httpd.conf.bak
 
@@ -562,8 +577,7 @@ fi
 
 qt pushd /etc/
 if git status | qt egrep 'resolver/dev|homebrew/etc/dnsmasq.conf'; then
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add resolver/dev homebrew/etc/dnsmasq.conf ; git commit -m '${SGP} Add dnsmasq files' "
+  etc_git_commit "git add resolver/dev homebrew/etc/dnsmasq.conf" "Add dnsmasq files"
 fi
 qt popd
 
@@ -574,31 +588,25 @@ if ! qt grep -i dnsmasq /etc/hosts; then
 # Use this hosts file for non-.dev domains like: foo.bar.com
 EOT
 
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add hosts ; git commit -m '${SGP} Add dnsmasq note to hosts file' "
+  etc_git_commit "git add hosts" "Add dnsmasq note to hosts file"
 fi
-# -- SETUP BREW PHP.INI -------------------------------------------------------
-echo "== Processing Brew php.ini =="
+# -- SETUP BREW PHP / PHP.INI /  XDEBUG-----------------------------------------
+echo "== Processing Brew PHP / php.ini / Xdebug =="
 
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
 
 for i in /usr/local/etc/php/*/php.ini; do
   version="$(basename "$(dirname "$i")")"
-  short_ver="${version//./}"
+  ver="${version/./}"
+  v="${ver:0:1}"
 
-  # brew info php${short_ver}
-  if qt ls /usr/local/opt/php${short_ver}/*.plist && ! qt ls ~/Library/LaunchAgents/homebrew.mxcl.php${short_ver}.plist; then
-    show_status "Linking php${short_ver} LaunchAgent plist"
-    ln -sfv /usr/local/opt/php${short_ver}/*.plist ~/Library/LaunchAgents/homebrew.mxcl.php${short_ver}.plist
-  fi
-
+  # Process php.ini for $version
   if [[ ! -f "/etc/homebrew/etc/php/$version/php.ini" ]]; then
     show_status "Copying Default Brew PHP $version Php.ini"
     [[ ! -d "/etc/homebrew/etc/php/$version" ]] && sudo mkdir -p "/etc/homebrew/etc/php/$version"
     sudo cp "/usr/local/etc/php/$version/php.ini" "/etc/homebrew/etc/php/$version/php.ini"
 
-    show_status 'Committing to git'
-    sudo -H bash -c " cd /etc/ ; git add homebrew/etc/php/$version/php.ini ; git commit -m '${SGP} Add homebrew/etc/php/$version/php.ini as a copy of homebrew default' "
+    etc_git_commit "git add homebrew/etc/php/$version/php.ini" "Add homebrew/etc/php/$version/php.ini as a copy of homebrew default"
 
     show_status 'Updating some brew PHP settings'
     sudo sed -i .bak '
@@ -621,56 +629,19 @@ for i in /usr/local/etc/php/*/php.ini; do
     fi
     ln -svf "/etc/homebrew/etc/php/$version/php.ini" "/usr/local/etc/php/$version/php.ini"
 
-    show_status 'Committing to git'
-    sudo -H bash -c " cd /etc/ ; git add homebrew/etc/php/$version/php.ini ; git commit -m '${SGP} Update homebrew/etc/php/$version/php.ini' "
+    etc_git_commit "git add homebrew/etc/php/$version/php.ini" "Update homebrew/etc/php/$version/php.ini"
   fi
-done
-# -- SETUP BREW PHP / XDEBUG---------------------------------------------------
-echo "== Processing Brew PHP / Xdebug =="
 
-if [[ -d /etc/homebrew/etc/apache2 ]]; then
-  show_status 'Deleting homebrew/etc/apache2 for switch to php-fpm'
-  sudo rm -rf /etc/homebrew/etc/apache2
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git rm -r homebrew/etc/apache2 ; git commit -m '${SGP} Deleting homebrew/etc/apache2 for switch to php-fpm' "
-fi
+  # Process ext-xdebug.ini for $version
+  if [[ ! -f "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" ]]; then
+    show_status "Copying Default Brew PHP $version ext-xdebug.ini"
+    [[ ! -d "/etc/homebrew/etc/php/$version/conf.d" ]] && sudo mkdir -p "/etc/homebrew/etc/php/$version/conf.d"
+    sudo cp "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini" "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
 
-if [[ -d /usr/local/var/run/apache2 ]]; then
-  rm -rf /usr/local/var/run/apache2
-fi
+    etc_git_commit "git add homebrew/etc/php/$version/conf.d/ext-xdebug.ini" "Add homebrew/etc/php/$version/conf.d/ext-xdebug.ini as a copy of homebrew default"
 
-# Account for both newly and previously provisioned scenarios
-sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\);# \1;"                       /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*/usr/local/opt/php56/libexec/apache2/libphp5.so\);# \1;"  /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\(Include[[:space:]]\"*/usr/local/var/run/apache2/php.conf\);# \1;"                                      /etc/apache2/httpd.conf
-sudo rm /etc/apache2/httpd.conf.bak
-
-qt pushd /etc/
-if git status | qt egrep 'apache2/httpd.conf'; then
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add apache2/httpd.conf ; git commit -m '${SGP} Update apache2/httpd.conf to use brew php-fpm' "
-fi
-qt popd
-
-for i in /usr/local/etc/php/*/conf.d/ext-xdebug.ini; do
-  version="$(basename "$(dirname "$(dirname "$i")")")"
-  ver="${version/./}"
-  v="${ver:0:1}"
-
-  LIBPHP="/usr/local/opt/php${ver}/libexec/apache2/libphp${v}.so"
-
-  if [[ -f "$LIBPHP" ]]; then
-
-    if [[ ! -f "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" ]]; then
-      show_status "Copying Default Brew PHP $version ext-xdebug.ini"
-      [[ ! -d "/etc/homebrew/etc/php/$version/conf.d" ]] && sudo mkdir -p "/etc/homebrew/etc/php/$version/conf.d"
-      sudo cp "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini" "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-
-      show_status 'Committing to git'
-      sudo -H bash -c " cd /etc/ ; git add homebrew/etc/php/$version/conf.d/ext-xdebug.ini ; git commit -m '${SGP} Add homebrew/etc/php/$version/conf.d/ext-xdebug.ini as a copy of homebrew default' "
-
-      show_status "Updating: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-      cat <<EOT | qt sudo tee "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
+    show_status "Updating: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
+    cat <<EOT | qt sudo tee "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
 [xdebug]
 ; The "real" path to the .so file would be:
 ;   zend_extension="/usr/local/Cellar/php${ver}-xdebug/*/xdebug.so"
@@ -689,17 +660,56 @@ for i in /usr/local/etc/php/*/conf.d/ext-xdebug.ini; do
  xdebug.profiler_output_name = "cachegrind.out.%t-%s.%u"
 EOT
 
-      show_status "Linking to: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-      if [[ -f "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini" ]]; then
-        mv /usr/local/etc/php/"$version"/conf.d/ext-xdebug.ini{,.orig}
-      fi
-      ln -svf "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini"
-
-      show_status 'Committing to git'
-      sudo -H bash -c " cd /etc/ ; git add homebrew ; git commit -m '${SGP} Update homebrew/etc/php/$version/conf.d/ext-xdebug.ini' "
+    show_status "Linking to: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
+    if [[ -f "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini" ]]; then
+      mv /usr/local/etc/php/"$version"/conf.d/ext-xdebug.ini{,.orig}
     fi
+    ln -svf "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini"
+
+    etc_git_commit "git add homebrew" "Update homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
+  fi
+
+  # Process php-fpm.conf for $version
+  #   This is the path for 7.x, and we need to check for it 1st, because it's easier this way
+  if [[ -f "/usr/local/etc/php/$version/php-fpm.d/www.conf" ]]; then
+    php_fpm_conf="/usr/local/etc/php/$version/php-fpm.d/www.conf"
+  elif [[ -f "/usr/local/etc/php/$version/php-fpm.conf" ]]; then
+    php_fpm_conf="/usr/local/etc/php/$version/php-fpm.conf"
+  else
+    php_fpm_conf=""
+  fi
+
+  if [[ ! -z "$php_fpm_conf" ]] && ! qt egrep "^listen[[:space:]]*=[[:space:]]*$PHP_FPM_LISTEN" "$php_fpm_conf"; then
+    show_status "Updating $php_fpm_conf"
+    sudo sed -i .bak "
+      s|^listen[[:space:]]*=[[:space:]]*.*|listen = $PHP_FPM_LISTEN|
+      s|[;]*listen.mode[[:space:]]*=[[:space:]]*.*|listen.mode = 0666|
+    " "$php_fpm_conf"
+    sudo rm "${php_fpm_conf}.bak"
   fi
 done
+
+if [[ -d /etc/homebrew/etc/apache2 ]]; then
+  show_status 'Deleting homebrew/etc/apache2 for switch to php-fpm'
+  sudo rm -rf /etc/homebrew/etc/apache2
+  etc_git_commit "git rm -r homebrew/etc/apache2" "Deleting homebrew/etc/apache2 for switch to php-fpm"
+fi
+
+if [[ -d /usr/local/var/run/apache2 ]]; then
+  rm -rf /usr/local/var/run/apache2
+fi
+
+# Account for both newly and previously provisioned scenarios
+sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\);# \1;"                       /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*/usr/local/opt/php56/libexec/apache2/libphp5.so\);# \1;"  /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\(Include[[:space:]]\"*/usr/local/var/run/apache2/php.conf\);# \1;"                                      /etc/apache2/httpd.conf
+sudo rm /etc/apache2/httpd.conf.bak
+
+qt pushd /etc/
+if git status | qt egrep 'apache2/httpd.conf'; then
+  etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf to use brew php-fpm"
+fi
+qt popd
 
 while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
   qte brew services stop "$service"
@@ -724,8 +734,7 @@ sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
 
 qt pushd /etc/
 if git status | qt grep 'apache2/extra/httpd-mpm.conf'; then
-  show_status 'Committing to git'
-  sudo -H bash -c " cd /etc/ ; git add apache2/extra/httpd-mpm.conf ; git commit -m '${SGP} Comment out LockFile in apache2/extra/httpd-mpm.conf' "
+  etc_git_commit "git add apache2/extra/httpd-mpm.conf" "Comment out LockFile in apache2/extra/httpd-mpm.conf"
 fi
 qt popd
 
@@ -893,7 +902,6 @@ bash-completion
 bash-git-prompt
 # Utilities
 apachetop
-boris
 composer
 coreutils
 drupalconsole
