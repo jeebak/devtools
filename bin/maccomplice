@@ -18,7 +18,7 @@ Usage: $accpl_self <subcommand> [options]
   System Helper Subcommands:
     ra        Restart Apache
     rd        Restart DnsMasq/mDNSResponder
-    rm        Restart MySQL
+    rm        Restart MariaDB/MySQL
 
     rdk       Restart Dock
     rf        Restart Finder
@@ -170,7 +170,13 @@ function accpl.rd() {
 }
 
 function accpl.rm() {
-  accpl.__reload_plist "$HOME/Library/LaunchAgents/homebrew.mxcl.mysql.plist"
+  local db
+
+  for db in mariadb mysql; do
+    if [[ -f "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist" ]]; then
+      accpl.__reload_plist "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist"
+    fi
+  done
 }
 
 # http://www.thxbye.de/mac/mac-restarting-the-mac-os-x-dock-finder-spaces-or-menubar.html
