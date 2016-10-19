@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Wrapper script for symfony console, to work anywhere within a git tree, not restricted
+# to within the symfony root.
+git_root="$(git rev-parse --show-toplevel 2> /dev/null)"
+git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat $git_root/.git/HEAD)"
+git_head="${git_head##refs/heads/}"
+
+if [[ ! -z "$git_root" ]]; then
+  # Look for SymfonyRequirements.php in repo
+  is_symfony="$(git ls-tree -r "$git_head" --name-only --full-tree | grep 'SymfonyRequirements.php')"
+  if [[ ! -z "$is_symfony" ]] && [[ $(wc -l <<< "$is_symfony") -eq 1 ]]; then
+    BATON="$(git ls-tree -r "$git_head" --name-only --full-tree | grep '/console$')"
+    # Strip away: /console and we'll have our: symfony_root
+    symfony_root="$(dirname "${BATON/console/}")"
+    # Not sure yet if we need to cd into the symfony_root or if specifying the
+    # absolute path to the artisan file is enough.
+    cd "$git_root/$symfony_root" || exit
+  else
+    echo "This doesn't seem to be a symfony project"
+    exit 1
+  fi
+fi
+
+php "$BATON" $options "$@"
