@@ -19,6 +19,7 @@ Usage: $accpl_self <subcommand> [options]
     ra        Restart Apache
     rd        Restart DnsMasq/mDNSResponder
     rm        Restart MariaDB/MySQL
+    rp        Restart PHP-FPM
 
     rdk       Restart Dock
     rf        Restart Finder
@@ -162,6 +163,8 @@ function accpl.ra() {
 
   errcho "PID(s):"
   pgrep -f "$httpd_path"
+
+  accpl.rp
 }
 
 function accpl.rd() {
@@ -177,6 +180,21 @@ function accpl.rm() {
       accpl.__reload_plist "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist"
     fi
   done
+}
+
+function accpl.rp() {
+  local service stopped the_rest version
+
+  while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
+    stopped="$service"
+    brew services stop "$stopped"
+  done 3< <(brew services list | egrep '^php[57]' | grep ' started ')
+
+  version="${1:-$stopped}"
+  version="${version:-56}"
+
+  accpl.__brew services start "${version}"
+  accpl.__brew services list
 }
 
 # http://www.thxbye.de/mac/mac-restarting-the-mac-os-x-dock-finder-spaces-or-menubar.html
@@ -388,12 +406,7 @@ function accpl.sphp() {
     accpl.__brew link --overwrite "php${newversion}"
 
     if accpl.__brew services list | egrep "^(php${currentversion}|php${newversion})" 2> /dev/null > /dev/null; then
-      while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
-        brew services stop "$service"
-      done 3< <(brew services list | egrep '^php[57]' | grep ' started ')
-
-      accpl.__brew services start "php${newversion}"
-      accpl.__brew services list
+      accpl.rp "php${newversion}"
     else
       errcho "Linking new modphp addon..."
       accpl.__verbose_run ln -svf "/usr/local/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "/usr/local/lib/libphp${shortNew}.so"
