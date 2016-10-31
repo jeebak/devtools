@@ -229,6 +229,7 @@ If you wish to continue, then this is what I'll be doing:
     - MariaDB (InnoDB tweaks, etc.)
     - Php.ini (Misc. configurations)
     - Apache2 (Enable modules, and add wildcard vhost conf)
+      [including ServerAlias for *.localhost.metaltoad-sites.com]
     - Dnsmasq (Resolve *.dev domains w/OUT /etc/hosts editing)
 EOT
 
@@ -786,7 +787,12 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
 </pre>
 </blockquote>
 <p>
-  the website will be served at: http://your-website.dev/ automatically.
+  the website will be served at:
+  <ul>
+    <li>http://your-website.dev/ and</li>
+    <li> http://your-site.localhost.metaltoad-sites.com/</li>
+  </ul>
+  automatically.
 </p>
 <p>
   Because of the way the apache vhost file VirtualDocumentRoot is configured,
