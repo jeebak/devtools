@@ -428,12 +428,12 @@ PHP_FPM_PROXY="fcgi://localhost/"
 
 [[ ! -d /usr/local/var/run ]] && mkdir -p /usr/local/var/run
 
-if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/dev.conf; then
+if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/dev.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/dev.conf; then
   cat <<EOT | qt sudo tee /etc/apache2/extra/dev.conf
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
-  ServerAlias *.dev *.vmdev
-  VirtualDocumentRoot $DEV_DIR/%-2/webroot
+  ServerAlias *.dev *.vmdev *.localhost.metaltoad-sites.com
+  VirtualDocumentRoot $DEV_DIR/%1/webroot
 
   UseCanonicalName Off
 
@@ -472,8 +472,8 @@ if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/a
 Listen 443
 <VirtualHost *:443>
   ServerAdmin $USER@localhost
-  ServerAlias *.dev *.vmdev
-  VirtualDocumentRoot $DEV_DIR/%-2/webroot
+  ServerAlias *.dev *.vmdev *.localhost.metaltoad-sites.com
+  VirtualDocumentRoot $DEV_DIR/%1/webroot
 
   SSLEngine On
   SSLCertificateFile    /private/etc/apache2/ssl/server.crt
