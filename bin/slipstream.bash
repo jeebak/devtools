@@ -459,7 +459,7 @@ if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/a
   </FilesMatch>
 
   <Proxy ${PHP_FPM_PROXY}>
-    ProxySet connectiontimeout=5 timeout=240
+    ProxySet connectiontimeout=5 timeout=1800
   </Proxy>
 
   <Directory "$DEV_DIR">
@@ -524,6 +524,13 @@ EOT
   fi
 
   etc_git_commit "git add apache2/extra/dev.conf" "Add apache2/extra/dev.conf"
+else
+  if qt grep ' ProxySet connectiontimeout=5 timeout=240$' /etc/apache2/extra/dev.conf; then
+    sudo sed -i .bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' /etc/apache2/extra/dev.conf
+    sudo rm /etc/apache2/extra/dev.conf.bak
+
+    etc_git_commit "git add apache2/extra/dev.conf" "Update apache2/extra/dev.conf ProxySet timeout value to 1800"
+  fi
 fi
 
 if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' /etc/apache2/httpd.conf; then
