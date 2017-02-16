@@ -526,6 +526,14 @@ EOT
   etc_git_commit "git add apache2/extra/dev.conf" "Add apache2/extra/dev.conf"
 fi
 
+if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' /etc/apache2/httpd.conf; then
+  cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
+
+# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)
+Timeout 1800
+EOT
+fi
+
 # Have ServerName match CN in SSL Cert
 sudo sed -i .bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' /etc/apache2/httpd.conf
 if qt diff /etc/apache2/httpd.conf /etc/apache2/httpd.conf.bak; then
@@ -612,6 +620,7 @@ for i in /usr/local/etc/php/*/php.ini; do
     show_status 'Updating some brew PHP settings'
     sudo sed -i .bak '
       s|max_execution_time = 30|max_execution_time = 0|
+      s|max_input_time = 60|max_input_time = 1800|
       s|memory_limit = 128M|memory_limit = 256M|
       s|display_errors = Off|display_errors = On|
       s|display_startup_errors = Off|display_startup_errors = On|
