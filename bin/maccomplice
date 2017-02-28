@@ -25,6 +25,7 @@ Usage: $accpl_self <subcommand> [options]
     rf        Restart Finder
     rl        Restart locate database
     rmb       Restart MenuBar
+    rcam      Restart VDCAssistant (Video Camera)
 
     th        Toggle Hidden files (AppleShowAllFiles)
 
@@ -208,6 +209,10 @@ function accpl.rf() {
 
 function accpl.rmb() {
   accpl.__ka SystemUIServer
+}
+
+function accpl.rcam() {
+  accpl.__verbose_run sudo killall -KILL VDCAssistant
 }
 
 function accpl.rl() {
