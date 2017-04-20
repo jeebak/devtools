@@ -779,7 +779,7 @@ if [[ ! -d "$DEV_DIR/slipstream/webroot" ]]; then
 fi
 
 cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
-<div style="width: 600px; margin: auto;">
+<div style="width: 600px; margin-bottom: 16px; margin-left: auto; margin-right: auto;">
   <h4>If you're seeing this, then it's a good sign that everything's working</h4>
 <?php
   if( ! empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
@@ -801,12 +801,11 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
   cd ~/Sites
   git clone git@github.com:username/your-website.git
 </pre>
-</blockquote>
 <p>
   the website will be served at:
   <ul>
     <li>http://your-website.dev/ and</li>
-    <li> http://your-site.localhost.metaltoad-sites.com/</li>
+    <li>http://your-site.localhost.metaltoad-sites.com/</li>
   </ul>
   automatically.
 </p>
@@ -844,8 +843,6 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
   <strong>NPM:</strong>
   $(clean <(get_pkgs "npm"))
 </p>
-
-<p> </p>
 </div>
 
 <?php
