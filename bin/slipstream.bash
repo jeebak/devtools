@@ -628,6 +628,7 @@ for i in /usr/local/etc/php/*/php.ini; do
     sudo sed -i .bak '
       s|max_execution_time = 30|max_execution_time = 0|
       s|max_input_time = 60|max_input_time = 1800|
+      s|; *max_input_vars = 1000|max_input_vars = 10000|
       s|memory_limit = 128M|memory_limit = 256M|
       s|display_errors = Off|display_errors = On|
       s|display_startup_errors = Off|display_startup_errors = On|
