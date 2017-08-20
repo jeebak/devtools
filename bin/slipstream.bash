@@ -893,10 +893,6 @@ vlc
 # This is dumb. Drush has a dependency on brew php, and composer but won't
 # install them automatically. This entire script depends on 'sort -u' to
 # determine what needs to be installed... so, creating php.
-php55
-php55-mcrypt
-php55-opcache
-php55-xdebug
 php56
 php56-mcrypt
 php56-opcache
