@@ -871,10 +871,9 @@ homebrew/services
 # Editors
 sublime-text
 # Misc
-clipmenu
+clipy
 # gimp
 google-chrome
-google-hangouts
 iterm2
 # Apple Java
 # http://apple.stackexchange.com/questions/153584/install-java-jre-6-next-to-jre-7-on-os-x-10-10-yosemite
