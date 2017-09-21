@@ -894,10 +894,12 @@ vlc
 # install them automatically. This entire script depends on 'sort -u' to
 # determine what needs to be installed... so, creating php.
 php56
+php56-memcached
 php56-mcrypt
 php56-opcache
 php56-xdebug
 php70
+php70-memcached
 php70-mcrypt
 php70-opcache
 php70-xdebug
