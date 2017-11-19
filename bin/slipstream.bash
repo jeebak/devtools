@@ -49,9 +49,10 @@ if [[ $OSTYPE == darwin* ]]; then
   if [[ $? -ne 0 ]]; then
     cat <<EOT
 Sorry! This script is currently only compatible with:
-  Yosemite   (10.10*)
-  El Capitan (10.11*)
-  Sierra     (10.12*)
+  Yosemite    (10.10*)
+  El Capitan  (10.11*)
+  Sierra      (10.12*)
+  High Sierra (10.13*)
 You're running:
 
 $(sw_vers)
