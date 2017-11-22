@@ -44,7 +44,7 @@ fi
 # -- CHECK MAC AND VERSION ----------------------------------------------------
 if [[ $OSTYPE == darwin* ]]; then
   OSX_VERSION="$(sw_vers -productVersion)"
-  [[ "$OSX_VERSION" =~ 10.1[012] ]]
+  [[ "$OSX_VERSION" =~ 10.1[0123] ]]
 
   if [[ $? -ne 0 ]]; then
     cat <<EOT
