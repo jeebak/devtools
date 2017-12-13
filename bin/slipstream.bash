@@ -231,7 +231,7 @@ If you wish to continue, then this is what I'll be doing:
     - Php.ini (Misc. configurations)
     - Apache2 (Enable modules, and add wildcard vhost conf)
       [including ServerAlias for *.localhost.metaltoad-sites.com]
-    - Dnsmasq (Resolve *.dev domains w/OUT /etc/hosts editing)
+    - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
 EOT
 
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
@@ -430,11 +430,23 @@ PHP_FPM_PROXY="fcgi://localhost/"
 
 [[ ! -d /usr/local/var/run ]] && mkdir -p /usr/local/var/run
 
-if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/dev.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/dev.conf; then
-  cat <<EOT | qt sudo tee /etc/apache2/extra/dev.conf
+if [[ -f /etc/apache2/extra/dev.conf ]]; then
+  etc_git_commit "git rm apache2/extra/dev.conf" "Remove apache2/extra/dev.conf"
+fi
+
+if qt grep '^# Local vhost and ssl, for \*.dev$' /etc/apache2/httpd.conf; then
+  sudo sed -i .bak '/^# Local vhost and ssl, for \*.dev$/d' /etc/apache2/httpd.conf
+  sudo sed -i .bak '/Include \/private\/etc\/apache2\/extra\/dev.conf/d' /etc/apache2/httpd.conf
+  sudo rm /etc/apache2/httpd.conf.bak
+
+  etc_git_commit "git add /etc/apache2/httpd.conf" "Remove references to .dev from /etc/apache2/httpd.conf"
+fi
+
+if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/localhost.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/localhost.conf; then
+  cat <<EOT | qt sudo tee /etc/apache2/extra/localhost.conf
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
-  ServerAlias *.dev *.vmdev *.localhost.metaltoad-sites.com
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
   VirtualDocumentRoot $DEV_DIR/%1/webroot
 
   UseCanonicalName Off
@@ -474,7 +486,7 @@ if [[ ! -f /etc/apache2/extra/dev.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/a
 Listen 443
 <VirtualHost *:443>
   ServerAdmin $USER@localhost
-  ServerAlias *.dev *.vmdev *.localhost.metaltoad-sites.com
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
   VirtualDocumentRoot $DEV_DIR/%1/webroot
 
   SSLEngine On
@@ -516,21 +528,21 @@ Listen 443
 </VirtualHost>
 EOT
 
-  if ! qt grep '^# Local vhost and ssl, for \*.dev$' /etc/apache2/httpd.conf; then
+  if ! qt grep '^# Local vhost and ssl, for \*.localhost$' /etc/apache2/httpd.conf; then
     cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
 
-# Local vhost and ssl, for *.dev
-Include /private/etc/apache2/extra/dev.conf
+# Local vhost and ssl, for *.localhost
+Include /private/etc/apache2/extra/localhost.conf
 EOT
   fi
 
-  etc_git_commit "git add apache2/extra/dev.conf" "Add apache2/extra/dev.conf"
+  etc_git_commit "git add apache2/extra/localhost.conf" "Add apache2/extra/localhost.conf"
 else
-  if qt grep ' ProxySet connectiontimeout=5 timeout=240$' /etc/apache2/extra/dev.conf; then
-    sudo sed -i .bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' /etc/apache2/extra/dev.conf
-    sudo rm /etc/apache2/extra/dev.conf.bak
+  if qt grep ' ProxySet connectiontimeout=5 timeout=240$' /etc/apache2/extra/localhost.conf; then
+    sudo sed -i .bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' /etc/apache2/extra/localhost.conf
+    sudo rm /etc/apache2/extra/localhost.conf.bak
 
-    etc_git_commit "git add apache2/extra/dev.conf" "Update apache2/extra/dev.conf ProxySet timeout value to 1800"
+    etc_git_commit "git add apache2/extra/localhost.conf" "Update apache2/extra/localhost.conf ProxySet timeout value to 1800"
   fi
 fi
 
@@ -570,18 +582,18 @@ if qt ls /usr/local/opt/dnsmasq/*.plist && ! qt ls /Library/LaunchDaemons/homebr
   sudo chown root /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
 fi
 
-if [[ ! -f /etc/homebrew/etc/dnsmasq.conf ]]; then
+if [[ ! -f /etc/homebrew/etc/dnsmasq.conf ]] || qt grep '^address=/.dev/127.0.0.1$' /etc/homebrew/etc/dnsmasq.conf; then
   show_status 'Creating: /etc/homebrew/etc/dnsmasq.conf'
   cat <<EOT | qt sudo tee /etc/homebrew/etc/dnsmasq.conf
-address=/.dev/127.0.0.1
+address=/.localhost/127.0.0.1
 EOT
   show_status 'Linking to: /usr/local/etc/dnsmasq.conf'
   ln -svf /etc/homebrew/etc/dnsmasq.conf /usr/local/etc/dnsmasq.conf
 fi
 
 [[ ! -d /etc/resolver ]] && sudo mkdir /etc/resolver
-if [[ ! -f /etc/resolver/dev ]]; then
-  cat <<EOT | qt sudo tee /etc/resolver/dev
+if [[ ! -f /etc/resolver/localhost ]]; then
+  cat <<EOT | qt sudo tee /etc/resolver/localhost
 nameserver 127.0.0.1
 EOT
 fi
@@ -593,16 +605,20 @@ if ! qt sudo launchctl list homebrew.mxcl.dnsmasq; then
 fi
 
 qt pushd /etc/
-if git status | qt egrep 'resolver/dev|homebrew/etc/dnsmasq.conf'; then
-  etc_git_commit "git add resolver/dev homebrew/etc/dnsmasq.conf" "Add dnsmasq files"
+if git status | qt egrep 'resolver/localhost|homebrew/etc/dnsmasq.conf'; then
+  etc_git_commit "git add resolver/localhost homebrew/etc/dnsmasq.conf" "Add dnsmasq files"
 fi
 qt popd
+
+if [[ -f /etc/resolver/dev ]]; then
+  etc_git_commit "git rm resolver/dev" "Remove /etc/resolver/dev"
+fi
 
 if ! qt grep -i dnsmasq /etc/hosts; then
   cat <<EOT | qt sudo tee -a /etc/hosts
 
-# NOTE: dnsmasq is managing *.dev domains (foo.dev) so there's no need to add such here
-# Use this hosts file for non-.dev domains like: foo.bar.com
+# NOTE: dnsmasq is managing *.localhost domains (foo.localhost) so there's no need to add such here
+# Use this hosts file for non-.localhost domains like: foo.bar.com
 EOT
 
   etc_git_commit "git add hosts" "Add dnsmasq note to hosts file"
@@ -796,8 +812,8 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
 
 <p>
   Your ~/Sites folder will now automatically serve websites from folders that
-  contain a "webroot" folder/symlink, using the .dev TLD. This means that there
-  is no need to edit the /etc/hosts file for *.dev domains. For example, if you:
+  contain a "webroot" folder/symlink, using the .localhost TLD. This means that there
+  is no need to edit the /etc/hosts file for *.localhost domains. For example, if you:
 </p>
 <pre>
   cd ~/Sites
@@ -806,7 +822,7 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
 <p>
   the website will be served at:
   <ul>
-    <li>http://your-website.dev/ and</li>
+    <li>http://your-website.localhost/ and</li>
     <li>http://your-site.localhost.metaltoad-sites.com/</li>
   </ul>
   automatically.
@@ -823,7 +839,7 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
 </pre>
 
 <p>
-  You can now access Adminer at: <a href="http://adminer.dev/">http://adminer.dev/</a>
+  You can now access Adminer at: <a href="http://adminer.localhost/">http://adminer.localhost/</a>
   using the same mysql credentials.
   Optionally, you can download a
   <a href="https://www.adminer.org/#extras" target="_blank">custom theme</a> adminer.css
@@ -852,7 +868,7 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
 ?>
 EOT
 
-open http://slipstream.dev/
+open http://slipstream.localhost/
 # -----------------------------------------------------------------------------
 # We're done! Now,...
 # clean_up (called automatically, since we're trap-ing EXIT signal)
