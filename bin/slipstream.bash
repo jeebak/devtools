@@ -920,6 +920,11 @@ php70-memcached
 php70-mcrypt
 php70-opcache
 php70-xdebug
+php71
+php71-memcached
+php71-mcrypt
+php71-opcache
+php71-xdebug
 # End: brew php
 # -----------------------------------------------------------------------------
 # Start: brew leaves
