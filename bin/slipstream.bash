@@ -230,7 +230,7 @@ If you wish to continue, then this is what I'll be doing:
     - MariaDB (InnoDB tweaks, etc.)
     - Php.ini (Misc. configurations)
     - Apache2 (Enable modules, and add wildcard vhost conf)
-      [including ServerAlias for *.localhost.metaltoad-sites.com]
+      [including ServerAlias for *.localhost.metaltoad-sites.com, and *.xip.io]
     - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
 EOT
 
@@ -442,11 +442,11 @@ if qt grep '^# Local vhost and ssl, for \*.dev$' /etc/apache2/httpd.conf; then
   etc_git_commit "git add /etc/apache2/httpd.conf" "Remove references to .dev from /etc/apache2/httpd.conf"
 fi
 
-if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/localhost.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/localhost.conf; then
+if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/localhost.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/localhost.conf || ! qt grep \\.xip\\.io /etc/apache2/extra/localhost.conf; then
   cat <<EOT | qt sudo tee /etc/apache2/extra/localhost.conf
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io
   VirtualDocumentRoot $DEV_DIR/%1/webroot
 
   UseCanonicalName Off
