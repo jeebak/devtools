@@ -401,9 +401,9 @@ for i in \
   sudo sed -i .bak "s;#$i;$i;" /etc/apache2/httpd.conf
 done
 
-DEV_DIR="/Users/$USER/Sites"
+DEST_DIR="/Users/$USER/Sites"
 
-[[ ! -d "$DEV_DIR" ]] && mkdir -p "$DEV_DIR"
+[[ ! -d "$DEST_DIR" ]] && mkdir -p "$DEST_DIR"
 
 if [[ ! -d "/etc/apache2/ssl" ]]; then
   mkdir -p "$$/ssl"
@@ -449,7 +449,7 @@ if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" 
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
   ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io
-  VirtualDocumentRoot $DEV_DIR/%1/webroot
+  VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   UseCanonicalName Off
 
@@ -477,7 +477,7 @@ if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" 
     ProxySet connectiontimeout=5 timeout=1800
   </Proxy>
 
-  <Directory "$DEV_DIR">
+  <Directory "$DEST_DIR">
     AllowOverride All
     Options +Indexes +FollowSymLinks +ExecCGI
     Require all granted
@@ -489,7 +489,7 @@ Listen 443
 <VirtualHost *:443>
   ServerAdmin $USER@localhost
   ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
-  VirtualDocumentRoot $DEV_DIR/%1/webroot
+  VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   SSLEngine On
   SSLCertificateFile    /private/etc/apache2/ssl/server.crt
@@ -521,7 +521,7 @@ Listen 443
     ProxySet connectiontimeout=5 timeout=240
   </Proxy>
 
-  <Directory "$DEV_DIR">
+  <Directory "$DEST_DIR">
     AllowOverride All
     Options +Indexes +FollowSymLinks +ExecCGI
     Require all granted
@@ -780,26 +780,26 @@ sudo apachectl -k restart
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
 show_status 'Setting up adminer'
-if [[ -d "$DEV_DIR/adminer/webroot" ]] && [[ "$(readlink "$DEV_DIR/adminer/webroot/index.php")" != "/usr/local/share/adminer/index.php" ]]; then
+if [[ -d "$DEST_DIR/adminer/webroot" ]] && [[ "$(readlink "$DEST_DIR/adminer/webroot/index.php")" != "/usr/local/share/adminer/index.php" ]]; then
   cat <<EOT
 
-It looks like you already have "$DEV_DIR/adminer/webroot" on your system. If
+It looks like you already have "$DEST_DIR/adminer/webroot" on your system. If
 you'd like to use the brew maintained version of Adminer, you can overwrite
 your current install of adminer with:
 
-  ln -svf "/usr/local/share/adminer/index.php" "$DEV_DIR/adminer/webroot/index.php"
+  ln -svf "/usr/local/share/adminer/index.php" "$DEST_DIR/adminer/webroot/index.php"
 
 EOT
 else
-  mkdir -p "$DEV_DIR/adminer/webroot"
-  ln -svf "/usr/local/share/adminer/index.php" "$DEV_DIR/adminer/webroot/index.php"
+  mkdir -p "$DEST_DIR/adminer/webroot"
+  ln -svf "/usr/local/share/adminer/index.php" "$DEST_DIR/adminer/webroot/index.php"
 fi
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
-if [[ ! -d "$DEV_DIR/slipstream/webroot" ]]; then
-  mkdir -p "$DEV_DIR/slipstream/webroot"
+if [[ ! -d "$DEST_DIR/slipstream/webroot" ]]; then
+  mkdir -p "$DEST_DIR/slipstream/webroot"
 fi
 
-cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
+cat <<EOT > "$DEST_DIR/slipstream/webroot/index.php"
 <div style="width: 600px; margin-bottom: 16px; margin-left: auto; margin-right: auto;">
   <h4>If you're seeing this, then it's a good sign that everything's working</h4>
 <?php
@@ -846,7 +846,7 @@ cat <<EOT > "$DEV_DIR/slipstream/webroot/index.php"
   using the same mysql credentials.
   Optionally, you can download a
   <a href="https://www.adminer.org/#extras" target="_blank">custom theme</a> adminer.css
-  to "$DEV_DIR/adminer/webroot/adminer.css"
+  to "$DEST_DIR/adminer/webroot/adminer.css"
 </p>
 
 <h4>These are the packages were installed</h4>
