@@ -665,67 +665,40 @@ EOT
 
   etc_git_commit "git add hosts" "Add dnsmasq note to hosts file"
 fi
-# -- SETUP BREW PHP / PHP.INI /  XDEBUG-----------------------------------------
+# -- SETUP BREW PHP / PHP.INI / XDEBUG ----------------------------------------
 echo "== Processing Brew PHP / php.ini / Xdebug =="
 
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
 
 for i in /usr/local/etc/php/*/php.ini; do
-  version="$(basename "$(dirname "$i")")"
-  ver="${version/./}"
-  # shellcheck disable=SC2034
-  v="${ver:0:1}"
+  dir_path="${i%/*}"
+  version="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$i")"
 
   # Process php.ini for $version
-  if [[ ! -f "/etc/homebrew/etc/php/$version/php.ini" ]]; then
-    show_status "Copying Default Brew PHP $version Php.ini"
-    [[ ! -d "/etc/homebrew/etc/php/$version" ]] && sudo mkdir -p "/etc/homebrew/etc/php/$version"
-    sudo cp "/usr/local/etc/php/$version/php.ini" "/etc/homebrew/etc/php/$version/php.ini"
+  show_status "Updating some $i settings"
+  sed -i .bak '
+    s|max_execution_time = 30|max_execution_time = 0|
+    s|max_input_time = 60|max_input_time = 1800|
+    s|; *max_input_vars = 1000|max_input_vars = 10000|
+    s|memory_limit = 128M|memory_limit = 256M|
+    s|display_errors = Off|display_errors = On|
+    s|display_startup_errors = Off|display_startup_errors = On|
+    s|;error_log = php_errors.log|error_log = /var/log/apache2/php_errors.log|
+    s|;date.timezone =|date.timezone = America/Los_Angeles|
+    s|pdo_mysql.default_socket=.*|pdo_mysql.default_socket="/tmp/mysql.sock"|
+    s|mysql.default_socket =.*|mysql.default_socket = "/tmp/mysql.sock"|
+    s|mysqli.default_socket =.*|mysqli.default_socket = "/tmp/mysql.sock"|
+    s|upload_max_filesize = 2M|upload_max_filesize = 100M|
+  ' "$i"
+  mv "${i}.bak" "${i}.${NOW}-post-process"
+  show_status "Original saved to: ${i}.${NOW}-post-process"
 
-    etc_git_commit "git add homebrew/etc/php/$version/php.ini" "Add homebrew/etc/php/$version/php.ini as a copy of homebrew default"
-
-    show_status 'Updating some brew PHP settings'
-    sudo sed -i .bak '
-      s|max_execution_time = 30|max_execution_time = 0|
-      s|max_input_time = 60|max_input_time = 1800|
-      s|; *max_input_vars = 1000|max_input_vars = 10000|
-      s|memory_limit = 128M|memory_limit = 256M|
-      s|display_errors = Off|display_errors = On|
-      s|display_startup_errors = Off|display_startup_errors = On|
-      s|;error_log = php_errors.log|error_log = /var/log/apache2/php_errors.log|
-      s|;date.timezone =|date.timezone = America/Los_Angeles|
-      s|pdo_mysql.default_socket=|pdo_mysql.default_socket="/tmp/mysql.sock"|
-      s|mysql.default_socket =|mysql.default_socket = "/tmp/mysql.sock"|
-      s|mysqli.default_socket =|mysqli.default_socket = "/tmp/mysql.sock"|
-      s|upload_max_filesize = 2M|upload_max_filesize = 100M|
-    ' "/etc/homebrew/etc/php/$version/php.ini"
-    sudo rm "/etc/homebrew/etc/php/$version/php.ini.bak"
-
-    show_status "Linking to: /etc/homebrew/etc/php/$version/php.ini"
-    if [[ -f "/usr/local/etc/php/$version/php.ini" ]]; then
-      mv /usr/local/etc/php/"$version"/php.ini{,.orig}
-    fi
-    ln -svf "/etc/homebrew/etc/php/$version/php.ini" "/usr/local/etc/php/$version/php.ini"
-
-    etc_git_commit "git add homebrew/etc/php/$version/php.ini" "Update homebrew/etc/php/$version/php.ini"
-  fi
-
-  # Process ext-xdebug.ini for $version
-  if [[ ! -f "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" ]]; then
-    show_status "Copying Default Brew PHP $version ext-xdebug.ini"
-    [[ ! -d "/etc/homebrew/etc/php/$version/conf.d" ]] && sudo mkdir -p "/etc/homebrew/etc/php/$version/conf.d"
-    sudo cp "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini" "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-
-    etc_git_commit "git add homebrew/etc/php/$version/conf.d/ext-xdebug.ini" "Add homebrew/etc/php/$version/conf.d/ext-xdebug.ini as a copy of homebrew default"
-
-    show_status "Updating: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-    cat <<EOT | qt sudo tee "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
+  # Process ext-xdebug.ini
+  show_status "Found old ext-xdebug.ini, backed up to: $dir_path/conf.d/ext-xdebug.ini"
+  mv "$dir_path/conf.d/ext-xdebug.ini"{,-"$NOW"}
+  show_status "Updating: $dir_path/conf.d/ext-xdebug.ini"
+  cat <<EOT > "$dir_path/conf.d/ext-xdebug.ini"
 [xdebug]
-; The "real" path to the .so file would be:
-;   zend_extension="/usr/local/Cellar/php${ver}-xdebug/*/xdebug.so"
-; but Homebrew provides this convenient symlink:
- zend_extension="/usr/local/opt/php${ver}-xdebug/xdebug.so"
-
  xdebug.remote_enable=On
  xdebug.remote_host=127.0.0.1
  xdebug.remote_port=9000
@@ -737,15 +710,6 @@ for i in /usr/local/etc/php/*/php.ini; do
  xdebug.trace_output_name = "trace.out.%t-%s.%u"
  xdebug.profiler_output_name = "cachegrind.out.%t-%s.%u"
 EOT
-
-    show_status "Linking to: /etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-    if [[ -f "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini" ]]; then
-      mv /usr/local/etc/php/"$version"/conf.d/ext-xdebug.ini{,.orig}
-    fi
-    ln -svf "/etc/homebrew/etc/php/$version/conf.d/ext-xdebug.ini" "/usr/local/etc/php/$version/conf.d/ext-xdebug.ini"
-
-    etc_git_commit "git add homebrew" "Update homebrew/etc/php/$version/conf.d/ext-xdebug.ini"
-  fi
 
   # Process php-fpm.conf for $version
   #   This is the path for 7.x, and we need to check for it 1st, because it's easier this way
@@ -759,11 +723,12 @@ EOT
 
   if [[ ! -z "$php_fpm_conf" ]] && ! qt grep -E "^listen[[:space:]]*=[[:space:]]*$PHP_FPM_LISTEN" "$php_fpm_conf"; then
     show_status "Updating $php_fpm_conf"
-    sudo sed -i .bak "
+    sed -i .bak "
       s|^listen[[:space:]]*=[[:space:]]*.*|listen = $PHP_FPM_LISTEN|
       s|[;]*listen.mode[[:space:]]*=[[:space:]]*.*|listen.mode = 0666|
     " "$php_fpm_conf"
-    sudo rm "${php_fpm_conf}.bak"
+    mv "${php_fpm_conf}.bak" "${php_fpm_conf}-${NOW}"
+    show_status "Original saved to: ${php_fpm_conf}-${NOW}"
   fi
 done
 
