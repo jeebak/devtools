@@ -320,6 +320,25 @@ else
   if ! brew --version | qt grep "Homebrew [>]*[^0]"; then
     die "Hmm... Old version of brew detected. You may want to run: brew update; brew upgrade; and re-run this script when done" 127
   fi
+
+  # https://brew.sh/2018/01/19/homebrew-1.5.0/
+  currentBrewVersion="$(brew --version | grep -E -o '[0-9]+\.[0-9]+')"
+
+  if [[ "$(echo -e "$currentBrewVersion\\n1.4" | sort -t '.' -k 1,1 -k 2,2 -g | tail -1)" = '1.4' ]]; then
+    errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
+    die "This script will no longer support the older version" 127
+  else
+    if brew list | grep -E -e '^php[57]' > /dev/null; then
+      show_status "Found old homebrew/php tap packages. Deleting"
+      brew list | grep -E -e '^php[57]' | xargs brew rm
+    fi
+
+    if brew tap  | grep -E homebrew/php  > /dev/null; then
+      show_status "Found old homebrew/php tap. Deleting"
+      brew untap homebrew/php
+    fi
+    find /usr/local/etc/php -name ext-mcrypt.ini -delete
+  fi
 fi
 
 show_status "brew tap"
