@@ -191,7 +191,7 @@ function accpl.rp() {
   while read -r -u3 service && [[ ! -z "$service" ]]; do
     stopped="$service"
     brew services stop "$stopped"
-  done 3< <(brew services list | grep -E '^php[57]' | grep ' started ' | cut -f1 -d' ')
+  done 3< <(brew services list | grep -E '^php[@]*[57]*' | grep ' started ' | cut -f1 -d' ')
 
   version="${1:-$stopped}"
   version="${version:-56}"
@@ -385,9 +385,23 @@ function accpl.sphp() {
   # https://raw.githubusercontent.com/conradkleinespel/sphp-osx/master/sphp
   # https://coderwall.com/p/nm_wna
   local currentversion newversion shortOld shortNew
+  local currentBrewVersion currentBrewPhpVersion validVersions
+
+  # https://brew.sh/2018/01/19/homebrew-1.5.0/
+  currentBrewVersion="$(brew --version | grep -E -o ' [0-9]+\.[0-9]+')"
+
+  # If slipstream.bash was used to setup, coreutils (which contains gsort) will be available
+  if [[ "$(echo -e "$currentBrewVersion\\n 1.4" | gsort -V -r | head -1)" = ' 1.4' ]]; then
+    errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
+    errcho "This script will no longer support the older version"
+    exit 1
+  fi
+
+  currentBrewPhpVersion="$([[ -d /usr/local/Cellar/php ]] && basename "$(realpath /usr/local/opt/php)" | grep -E -o '[0-9]+\.[0-9]+')"
+  validVersions="$(find /usr/local/opt/php@* -type l -exec basename {} + | grep -E -o '[0-9]+\.[0-9]+' | tr '\n' '|')"
 
   if [ $# -ne 1 ]; then
-    errcho "Usage: $accpl_self sphp [phpversion|sys]"
+    errcho "Usage: $accpl_self sphp [${validVersions}sys]"
     exit 1
   fi
 
@@ -401,24 +415,29 @@ function accpl.sphp() {
     return
   fi
 
-  currentversion="$(php -r "echo str_replace('.', '', substr(phpversion(), 0, 3));")"
+  currentversion="$(php -r "echo substr(phpversion(), 0, 3);")"
   newversion="$1"
 
   # shellcheck disable=SC2034
   shortOld="$(php -r "echo substr(phpversion(), 0, 1);")"
   shortNew="$(php -r "echo substr('$1', 0, 1);")"
 
-  if accpl.__brew list "php${newversion}" 2> /dev/null > /dev/null; then
+  if accpl.__brew list "php@${newversion}" 2> /dev/null > /dev/null; then
     errcho "PHP version $newversion found"
 
-    errcho "Unlinking old binaries..."
-    accpl.__brew unlink "php${currentversion}" 2> /dev/null > /dev/null
+    errcho "Unlinking old binaries for ${currentversion} ..."
+    accpl.__brew unlink "php@${currentversion}"
 
-    errcho "Linking new binaries..."
-    accpl.__brew link --overwrite "php${newversion}"
+    errcho "Linking new binaries for ${newversion} ..."
+    accpl.__brew unlink "php@${newversion}" 2> /dev/null > /dev/null
+    accpl.__brew link --overwrite --force "php@${newversion}"
 
-    if accpl.__brew services list | grep -E "^(php${currentversion}|php${newversion})" 2> /dev/null > /dev/null; then
-      accpl.rp "php${newversion}"
+    if accpl.__brew services list | grep -E '^php[@]*[57]*' 2> /dev/null > /dev/null; then
+      if [[ "$newversion" = "$currentBrewPhpVersion" ]]; then
+        accpl.rp "php"
+      else
+        accpl.rp "php@${newversion}"
+      fi
     else
       errcho "Linking new modphp addon..."
       accpl.__verbose_run ln -svf "/usr/local/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "/usr/local/lib/libphp${shortNew}.so"
