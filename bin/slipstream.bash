@@ -3,6 +3,7 @@
 # -- HELPER FUNCTIONS, PT. 1 --------------------------------------------------
 DEBUG=NotEmpty
 DEBUG=
+NOW="$(date '+%Y-%m-%d_%H-%M-%S')"
 
 # Echo to strerr
 function errcho() {
@@ -88,7 +89,7 @@ function clean() {
 
 # Process install
 function process() {
-  local brew_php_linked debug extra line
+  local brew_php_linked debug extra line pecl_pkg num_ver
 
   debug="$([[ ! -z "$DEBUG" ]] && echo echo)"
 
@@ -105,15 +106,54 @@ function process() {
         line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
         $debug brew install "${line[@]}";;
       'brew php')
-        line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
-        brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
+        brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php php@[57].[0-9]*)"
+        num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+')"
+
         if [[ ! -z "$brew_php_linked" ]]; then
-          if [[ "$line" != "$brew_php_linked"* ]]; then
+          if [[ "$line" != "$brew_php_linked" ]]; then
             brew unlink "$brew_php_linked"
-            qte brew list "${line:0:5}" && brew link "${line:0:5}"
           fi
         fi
-        $debug brew install "${line[@]}";;
+
+        # Wipe the slate clean
+        if [[ -f "/usr/local/etc/php/$num_ver/php.ini" ]]; then
+          show_status "Found old php.ini, backed up to: /usr/local/etc/php/$num_ver/php.ini-$NOW"
+          mv "/usr/local/etc/php/$num_ver/php.ini"{,-"$NOW"}
+        fi
+        rm -rf "/usr/local/share/${line/php/pear}"
+
+        $debug brew install "${line[@]}"
+        $debug brew link --overwrite --force "$line"
+
+        show_status "Installing PECLs for: $line"
+
+        $debug "/usr/local/opt/$line/bin/pecl" channel-update pecl.php.net
+
+        # This inner loop to install pecl packages for specific php versions'
+        # only run when the brew install for the specific version's run, i.e.,
+        # pecl installation's not separate/standalone, currently.
+        while read -r -u4 pecl_pkg; do
+          if pecl_pkg="$(sed 's/#.*$//' <<< "$pecl_pkg")" && [[ ! -z "$pecl_pkg" ]]; then
+            # We're not checking to see if it's already installed
+
+            # This entire block is to accommodate php@5.6 :/
+            if [[ "$line" =~ @ ]] && [[ "$pecl_pkg" =~ $line ]]; then
+              # TODO: refine this for multiple versions
+              pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
+              show_status "PECL: Installing: $pecl_pkg"
+              "/usr/local/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
+            else
+              pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
+              show_status "PECL: Installing: $pecl_pkg"
+              env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
+                  CFLAGS='-fgnu89-inline' \
+                  LDFLAGS='-fgnu89-inline' \
+                  CXXFLAGS='-fgnu89-inline' \
+                "/usr/local/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
+            fi
+          fi
+        done 4< <(get_pkgs "pecl")
+        ;;
       npm)
         SUDO=
         $debug $SUDO npm install -g "${line[@]}";;
