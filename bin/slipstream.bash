@@ -751,16 +751,16 @@ qt popd
 
 while read -r -u3 service && [[ ! -z "$service" ]]; do
   qte brew services stop "$service"
-done 3< <(brew services list | grep -E '^php[57]' | grep ' started ' | cut -f1 -d' ')
+done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' started ' | cut -f1 -d' ')
 
-# Make php56 the default
+# Make php@5.6 the default
 [[ ! -d /usr/local/var/log/ ]] && mkdir -p /usr/local/var/log/
-brew services start php56
+brew services start php@5.6
 
-brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
+brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php php@[57].[0-9]*)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
-  brew link --overwrite php56
+  brew link --overwrite --force php@5.6
 fi
 
 # Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
@@ -909,25 +909,25 @@ vlc
 # End: brew cask
 # -----------------------------------------------------------------------------
 # Start: brew php
-# This is dumb. Drush has a dependency on brew php, and composer but won't
-# install them automatically. This entire script depends on 'sort -u' to
-# determine what needs to be installed... so, creating php.
-php56
-php56-memcached
-php56-mcrypt
-php56-opcache
-php56-xdebug
-php70
-php70-memcached
-php70-mcrypt
-php70-opcache
-php70-xdebug
-php71
-php71-memcached
-php71-mcrypt
-php71-opcache
-php71-xdebug
+# Php 7.2 dropped mcrypt support. Previous versions now have it built in: php -m | grep mcrypt
+php
+php@5.6
+php@7.0
+php@7.1
 # End: brew php
+# -----------------------------------------------------------------------------
+# Start: pecl
+# some_module:php@5.6-1.2.3:php@7.1-2.3.4
+#   if      php@5.6 then use some_module-1.2.3
+#   else if php@7.1 then use some_module-2.3.4
+#   else use current version of some_module
+#   end if
+igbinary
+imagick
+memcached:php@5.6-2.2.0
+opcache
+xdebug:php@5.6-2.5.5
+# End: pecl
 # -----------------------------------------------------------------------------
 # Start: brew leaves
 # Development Envs
