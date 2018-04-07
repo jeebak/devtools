@@ -44,9 +44,8 @@ fi
 # -- CHECK MAC AND VERSION ----------------------------------------------------
 if [[ $OSTYPE == darwin* ]]; then
   OSX_VERSION="$(sw_vers -productVersion)"
-  [[ "$OSX_VERSION" =~ 10.1[0123] ]]
 
-  if [[ $? -ne 0 ]]; then
+  if [[ ! "$OSX_VERSION" =~ 10.1[0123] ]]; then
     cat <<EOT
 Sorry! This script is currently only compatible with:
   Yosemite    (10.10*)
@@ -82,7 +81,7 @@ function clean_up() {
 
 trap clean_up EXIT INT QUIT TERM
 # -----------------------------------------------------------------------------
-# Strip out comments, beginning and trailing whitespace, [ :].*$, an blank lines
+# Strip out comments, beginning and trailing whitespace, [ :].*$, and blank lines
 function clean() {
   sed 's/#.*$//;s/^[[:blank:]][[:blank:]]*//g;s/[[:blank:]][[:blank:]]*$//;s/[ :].*$//;/^$/d' "$1" | sort -u
 }
@@ -94,19 +93,19 @@ function process() {
   debug="$([[ ! -z "$DEBUG" ]] && echo echo)"
 
   # Compare what is already installed with what we want installed
-  while read -r -u3 line && [[ ! -z "$line" ]]; do
+  while read -r -u3 -a line && [[ ! -z "$line" ]]; do
     show_status "($1) $line"
     case "$1" in
       'brew tap')
-        $debug brew tap $line;;
+        $debug brew tap "${line[@]}";;
       'brew cask')
-        $debug brew cask install $line;;
+        $debug brew cask install "${line[@]}";;
       'brew leaves')
         # Quick hack to allow for extra --args
-        line="$(egrep "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
-        $debug brew install $line;;
+        line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
+        $debug brew install "${line[@]}";;
       'brew php')
-        line="$(egrep "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
+        line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
         brew_php_linked="$(qte cd /usr/local/var/homebrew/linked && qte ls -d php[57][0-9])"
         if [[ ! -z "$brew_php_linked" ]]; then
           if [[ "$line" != "$brew_php_linked"* ]]; then
@@ -114,23 +113,24 @@ function process() {
             qte brew list "${line:0:5}" && brew link "${line:0:5}"
           fi
         fi
-        $debug brew install $line;;
+        $debug brew install "${line[@]}";;
       npm)
         SUDO=
-        $debug $SUDO npm install -g $line;;
+        $debug $SUDO npm install -g "${line[@]}";;
       gem)
         SUDO=sudo
+        # shellcheck disable=SC2012
         if [[ "$(ls -ld "$(command -v gem)" | awk '{print $3}')" != 'root' ]]; then
           SUDO=
         fi
 
         # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
         if qt command -v csrutil && csrutil status | qt grep enabled; then
-          extra='-n /usr/local/bin'
+          extra=(-n /usr/local/bin)
         fi
 
-        line="$(egrep "^$line[ ]*.*$" <(get_pkgs "$1"))"
-        $debug $SUDO "$1" install -f $extra $line;;
+        line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
+        $debug $SUDO "$1" install -f "${extra[@]}" "${line[@]}";;
       *)
         ;;
     esac
@@ -164,7 +164,7 @@ function get_diff() {
 
 # Colorized output status
 function show_status() {
-  echo "$(tput setaf 3)Working on: $(tput setaf 5)${@}$(tput sgr0)"
+  echo "$(tput setaf 3)Working on: $(tput setaf 5)${*}$(tput sgr0)"
 }
 
 # Git commit /etc changes via sudo
@@ -206,6 +206,7 @@ function genssl() {
 # .text
 if ! qt xcode-select -p; then
   echo "You don't seem to have Xcode Command Line Tools installed"
+  # shellcheck disable=SC2034
   read -r -p "Hit [enter] to start its installation. Re-run this script when done: " dummy
   xcode-select --install
   exit
@@ -234,6 +235,7 @@ If you wish to continue, then this is what I'll be doing:
     - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
 EOT
 
+# shellcheck disable=SC2034
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
 # -- KEEP DISPLAY/SYSTEM FROM IDLING/SLEEPING ---------------------------------
 # Generously setting for an hour, but clean_up() will kill it upon exit or
@@ -320,7 +322,7 @@ EOT
 fi
 
 qt pushd /etc/
-if git status | qt egrep 'postfix/main.cf|postfix/virtual'; then
+if git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
   etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
 fi
 qt popd
@@ -467,7 +469,7 @@ if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" 
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
-  <FilesMatch \.php$>
+  <FilesMatch \\.php$>
     SetHandler "${PHP_FPM_HANDLER}"
   </FilesMatch>
 
@@ -511,7 +513,7 @@ Listen 443
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
-  <FilesMatch \.php$>
+  <FilesMatch \\.php$>
     SetHandler "${PHP_FPM_HANDLER}"
   </FilesMatch>
 
@@ -605,7 +607,7 @@ if ! qt sudo launchctl list homebrew.mxcl.dnsmasq; then
 fi
 
 qt pushd /etc/
-if git status | qt egrep 'resolver/localhost|homebrew/etc/dnsmasq.conf'; then
+if git status | qt grep -E 'resolver/localhost|homebrew/etc/dnsmasq.conf'; then
   etc_git_commit "git add resolver/localhost homebrew/etc/dnsmasq.conf" "Add dnsmasq files"
 fi
 qt popd
@@ -631,6 +633,7 @@ echo "== Processing Brew PHP / php.ini / Xdebug =="
 for i in /usr/local/etc/php/*/php.ini; do
   version="$(basename "$(dirname "$i")")"
   ver="${version/./}"
+  # shellcheck disable=SC2034
   v="${ver:0:1}"
 
   # Process php.ini for $version
@@ -714,7 +717,7 @@ EOT
     php_fpm_conf=""
   fi
 
-  if [[ ! -z "$php_fpm_conf" ]] && ! qt egrep "^listen[[:space:]]*=[[:space:]]*$PHP_FPM_LISTEN" "$php_fpm_conf"; then
+  if [[ ! -z "$php_fpm_conf" ]] && ! qt grep -E "^listen[[:space:]]*=[[:space:]]*$PHP_FPM_LISTEN" "$php_fpm_conf"; then
     show_status "Updating $php_fpm_conf"
     sudo sed -i .bak "
       s|^listen[[:space:]]*=[[:space:]]*.*|listen = $PHP_FPM_LISTEN|
@@ -735,20 +738,20 @@ if [[ -d /usr/local/var/run/apache2 ]]; then
 fi
 
 # Account for both newly and previously provisioned scenarios
-sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\);# \1;"                       /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\(LoadModule[[:space:]]*php5_module[[:space:]]*/usr/local/opt/php56/libexec/apache2/libphp5.so\);# \1;"  /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\(Include[[:space:]]\"*/usr/local/var/run/apache2/php.conf\);# \1;"                                      /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                      /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*/usr/local/opt/php56/libexec/apache2/libphp5.so\\);# \\1;" /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\\(Include[[:space:]]\"*/usr/local/var/run/apache2/php.conf\\);# \\1;"                                     /etc/apache2/httpd.conf
 sudo rm /etc/apache2/httpd.conf.bak
 
 qt pushd /etc/
-if git status | qt egrep 'apache2/httpd.conf'; then
+if git status | qt grep -E 'apache2/httpd.conf'; then
   etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf to use brew php-fpm"
 fi
 qt popd
 
-while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
+while read -r -u3 service && [[ ! -z "$service" ]]; do
   qte brew services stop "$service"
-done 3< <(brew services list | egrep '^php[57]' | grep ' started ')
+done 3< <(brew services list | grep -E '^php[57]' | grep ' started ' | cut -f1 -d' ')
 
 # Make php56 the default
 [[ ! -d /usr/local/var/log/ ]] && mkdir -p /usr/local/var/log/
