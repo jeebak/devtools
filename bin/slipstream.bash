@@ -780,19 +780,19 @@ sudo apachectl -k restart
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
 show_status 'Setting up adminer'
-if [[ -d "$DEST_DIR/adminer/webroot" ]] && [[ "$(readlink "$DEST_DIR/adminer/webroot/index.php")" != "/usr/local/share/adminer/index.php" ]]; then
-  cat <<EOT
+[[ -d   "$DEST_DIR/adminer/webroot" ]] && mkdir -p  "$DEST_DIR/adminer/webroot"
+[[ ! -w "$DEST_DIR/adminer/webroot" ]] && chmod u+w "$DEST_DIR/adminer/webroot"
+latest="$(curl -IkLs https://github.com/vrana/adminer/releases/latest | col -b | grep Location | grep -E -o '[^/]+$')"
 
-It looks like you already have "$DEST_DIR/adminer/webroot" on your system. If
-you'd like to use the brew maintained version of Adminer, you can overwrite
-your current install of adminer with:
-
-  ln -svf "/usr/local/share/adminer/index.php" "$DEST_DIR/adminer/webroot/index.php"
-
-EOT
+if [[ -e "$DEST_DIR/adminer/webroot/index.php" ]]; then
+  if [[ "$(grep '\* @version' "$DEST_DIR/adminer/webroot/index.php" | grep -E -o '[0-9]+.*')" != "${latest/v/}" ]]; then
+    rm -f  "$DEST_DIR/adminer/webroot/index.php"
+    show_status 'Updating adminer to latest version'
+    curl -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
+  fi
 else
-  mkdir -p "$DEST_DIR/adminer/webroot"
-  ln -svf "/usr/local/share/adminer/index.php" "$DEST_DIR/adminer/webroot/index.php"
+  rm -f  "$DEST_DIR/adminer/webroot/index.php" # could be dead symlink
+  curl -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
 fi
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
 if [[ ! -d "$DEST_DIR/slipstream/webroot" ]]; then
@@ -883,7 +883,6 @@ exit
 # .data
 # -----------------------------------------------------------------------------
 # Start: brew tap
-homebrew/php
 homebrew/services
 # End: brew tap
 # -----------------------------------------------------------------------------
@@ -934,7 +933,6 @@ php71-xdebug
 # Development Envs
 node
 # Database
-adminer
 mariadb
 # Network
 dnsmasq
@@ -946,13 +944,8 @@ bash-git-prompt
 apachetop
 composer
 coreutils
-drupalconsole
-drush
 php-cs-fixer
 pngcrush
-psysh
-symfony-installer
-terminus
 the_silver_searcher
 wp-cli
 # End: brew leaves
