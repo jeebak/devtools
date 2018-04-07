@@ -9,6 +9,7 @@ function errcho() {
 
 accpl_self="${0##/*/}"
 
+# shellcheck source=/dev/null
 [[ -f "${0%/*}/../lib/bash/colors.sh" ]] && source "${0%/*}/../lib/bash/colors.sh"
 
 function accpl.help() {
@@ -79,7 +80,7 @@ function accpl.__tell() {
 
   osascript -e "
 if application \"$app\" is running then
-  tell app \"$app\" to $@
+  tell app \"$app\" to $*
 else
   if ((system attribute \"QUIET\" as string) is not equal to \"true\") then
     say \"$app is not running.\"
@@ -88,7 +89,7 @@ end if"
 }
 
 function accpl.__verbose_run() {
-  errcho "Running: $@"
+  errcho "Running: $*"
   "$@"
 }
 
@@ -108,7 +109,7 @@ function accpl.__adr() {
 
 # Apple Defaults Toggle
 function accpl.__adt() {
-  accpl.__adw "$@" -bool $([[ "$(accpl.__adr "$@")" =~ 1|yes|YES|true|TRUE ]] && echo NO || echo YES)
+  accpl.__adw "$@" -bool "$([[ "$(accpl.__adr "$@")" =~ 1|yes|YES|true|TRUE ]] && echo NO || echo YES)"
 }
 
 function accpl.__brew() {
@@ -185,12 +186,12 @@ function accpl.rm() {
 }
 
 function accpl.rp() {
-  local service stopped the_rest version
+  local service stopped version
 
-  while read -r -u3 service the_rest && [[ ! -z "$service" ]]; do
+  while read -r -u3 service && [[ ! -z "$service" ]]; do
     stopped="$service"
     brew services stop "$stopped"
-  done 3< <(brew services list | egrep '^php[57]' | grep ' started ')
+  done 3< <(brew services list | grep -E '^php[57]' | grep ' started ' | cut -f1 -d' ')
 
   version="${1:-$stopped}"
   version="${version:-56}"
@@ -363,19 +364,21 @@ function accpl.buu() {
 
 # Inspiredb by: http://zanshin.net/2014/02/03/how-to-list-brew-dependencies/
 function accpl.bdeps() {
-  local cask
+  local formula
 
-  while read -r cask; do
-    echo "${yellow}${cask}:${magenta}" $(brew deps "$cask") "${reset_colors}"
-  done <<< "$([[ $# -ne 0 ]] && echo "$@" || brew list)"
+  while read -r formula; do
+    # shellcheck disable=SC2154
+    echo "${yellow}${formula}:${magenta} $(brew deps "$formula") ${reset_colors}"
+  done <<< "$({ [[ $# -ne 0 ]] && echo "$@" | tr ' ' '\n'; } || brew list)"
 }
 
 function accpl.buses() {
-  local cask
+  local formula
 
-  while read -r cask; do
-    echo "${yellow}${cask}:${magenta}" $(brew uses --installed "$cask") "${reset_colors}"
-  done <<< "$([[ $# -ne 0 ]] && echo "$@" || brew list)"
+  while read -r formula; do
+    # shellcheck disable=SC2154
+    echo "${yellow}${formula}:${magenta} $(brew uses --installed "$formula") ${reset_colors}"
+  done <<< "$({ [[ $# -ne 0 ]] && echo "$@" | tr ' ' '\n'; } || brew list)"
 }
 
 function accpl.sphp() {
@@ -401,12 +404,11 @@ function accpl.sphp() {
   currentversion="$(php -r "echo str_replace('.', '', substr(phpversion(), 0, 3));")"
   newversion="$1"
 
+  # shellcheck disable=SC2034
   shortOld="$(php -r "echo substr(phpversion(), 0, 1);")"
   shortNew="$(php -r "echo substr('$1', 0, 1);")"
 
-  accpl.__brew list "php${newversion}" 2> /dev/null > /dev/null
-
-  if [ $? -eq 0 ]; then
+  if accpl.__brew list "php${newversion}" 2> /dev/null > /dev/null; then
     errcho "PHP version $newversion found"
 
     errcho "Unlinking old binaries..."
@@ -415,7 +417,7 @@ function accpl.sphp() {
     errcho "Linking new binaries..."
     accpl.__brew link --overwrite "php${newversion}"
 
-    if accpl.__brew services list | egrep "^(php${currentversion}|php${newversion})" 2> /dev/null > /dev/null; then
+    if accpl.__brew services list | grep -E "^(php${currentversion}|php${newversion})" 2> /dev/null > /dev/null; then
       accpl.rp "php${newversion}"
     else
       errcho "Linking new modphp addon..."
@@ -506,7 +508,7 @@ function accpl.vv() {
 #   declare -f, for function definitions
 if [[ "${BASH_SOURCE[0]}" = "${0}" ]]; then
   # Allow for function names to be sym- or hard-linked to this script
-  type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self" || {
+  { type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self"; } || {
     subcommand="$1"
     shift
   }
