@@ -9,7 +9,7 @@ function errcho() {
 }
 
 accpl_self="${0##/*/}"
-destdir="$(egrep -o '[^/]+/[^/]*$' <<< "${0%/bin/$accpl_self}")"
+destdir="$(grep -E -o '[^/]+/[^/]*$' <<< "${0%/bin/$accpl_self}")"
 confdir="${XDG_CONFIG_HOME:-$HOME/.config}/$destdir"
 
 function accpl.help() {
@@ -133,22 +133,22 @@ function accpl.__get_mysql_creds() {
   local dbname dbpassword dbusername clean_mysql_db
 
   if accpl.__is_concrete5; then
-    set -- $(accpl.__get_concrete5_creds)
+    read -r dbname dbpassword dbusername <<< "$(accpl.__get_concrete5_creds)"
   elif accpl.__is_drupal; then
-    set -- $(accpl.__get_drupal_creds)
+    read -r dbname dbpassword dbusername <<< "$(accpl.__get_drupal_creds)"
   elif accpl.__is_joomla; then
-    set -- $(accpl.__get_joomla_creds)
+    read -r dbname dbpassword dbusername <<< "$(accpl.__get_joomla_creds)"
   elif accpl.__is_wordpress; then
-    set -- $(accpl.__get_wordpress_creds)
+    read -r dbname dbpassword dbusername <<< "$(accpl.__get_wordpress_creds)"
   fi
 
   if [[ $# -ne 3 ]]; then
     clean_mysql_db="$(accpl.__get_clean_mysql_db)"
   fi
 
-  dbname="${1:-$clean_mysql_db}"
-  dbpassword="${2:-$clean_mysql_db}"
-  dbusername="${3:-$clean_mysql_db}"
+  dbname="${dbname:-$clean_mysql_db}"
+  dbpassword="${dbpassword:-$clean_mysql_db}"
+  dbusername="${dbusername:-$clean_mysql_db}"
 
   echo "$dbname" "$dbpassword" "$dbusername"
 }
@@ -265,7 +265,7 @@ function accpl.__run_compass() {
 }
 
 function accpl.__verbose_run() {
-  errcho "Running: $@"
+  errcho "Running: $*"
   "$@"
 }
 
@@ -367,24 +367,19 @@ function accpl.__get_git_root() {
 }
 
 function accpl.__get_concrete5_creds() {
-  local concrete5_root
+  local concrete5_root creds
 
   concrete5_root="$(accpl.__get_concrete5_root)"
   # Pipe to sort, to ensure: DB_DATABASE DB_PASSWORD DB_USERNAME order.
   # Concrete 5.6:
   if [[ -f "$concrete5_root/config/site.php" ]]; then
-    set -- $(egrep 'DB_(DATABASE|PASSWORD|USERNAME)' "$concrete5_root/config/site.php" | sort | cut -d \' -f 4)
+    creds=( "$(grep -E 'DB_(DATABASE|PASSWORD|USERNAME)' "$concrete5_root/config/site.php" | sort | cut -d \' -f 4)" )
   # Concrete 5.7:
   elif [[ -f "$concrete5_root/application/config/database.php" ]]; then
-    set -- $(php -r "\$f=require('$concrete5_root/application/config/database.php'); \$f=\$f['connections']['concrete']; print(\$f['database'].' '.\$f['password'].' '.\$f['username']);")
+    creds=( "$(php -r "\$f=require('$concrete5_root/application/config/database.php'); \$f=\$f['connections']['concrete']; print(\$f['database'].' '.\$f['password'].' '.\$f['username']);")" )
   fi
 
-  # This will fail if any of the results has whitespace
-  if [[ $# -ne 3 ]]; then
-    set --
-  fi
-
-  echo "$@"
+  echo "${creds[@]}"
 }
 
 function accpl.__get_concrete5_root() {
@@ -404,7 +399,7 @@ function accpl.__get_concrete5_root() {
 }
 
 function accpl.__get_drupal_creds() {
-  local drupal_root settings_file
+  local drupal_root settings_file creds
 
   drupal_root="$(accpl.__get_drupal_root)"
   # Pipe to sort, to ensure: db-name, db-password, db-username order, which
@@ -420,14 +415,9 @@ function accpl.__get_drupal_creds() {
     settings_file="$drupal_root/sites/default/settings.php"
   fi
 
-  [[ -n "$settings_file" ]] && set -- $(php -r "require('$settings_file');\$d=\$databases['default']['default'];print \$d['database'].' '.\$d['password'].' '.\$d['username'];");
+  [[ -n "$settings_file" ]] && creds=( "$(php -r "require('$settings_file');\$d=\$databases['default']['default'];print \$d['database'].' '.\$d['password'].' '.\$d['username'];")" )
 
-  # This will fail if any of the results has whitespace
-  if [[ $# -ne 3 ]]; then
-    set --
-  fi
-
-  echo "$@"
+  echo "${creds[@]}"
 }
 
 function accpl.__get_drupal_root() {
@@ -450,20 +440,15 @@ function accpl.__get_drupal_root() {
 }
 
 function accpl.__get_joomla_creds() {
-  local joomla_root
+  local joomla_root creds
 
   joomla_root="$(accpl.__get_joomla_root)"
   # db password user
   if [[ -f "$joomla_root/configuration.php" ]]; then
-    set -- $(php -r "require('$joomla_root/configuration.php'); \$t = new JConfig; print \$t->db.' '.\$t->password.' '.\$t->user;");
+    creds=( "$(php -r "require('$joomla_root/configuration.php'); \$t = new JConfig; print \$t->db.' '.\$t->password.' '.\$t->user;")" );
   fi
 
-  # This will fail if any of the results has whitespace
-  if [[ $# -ne 3 ]]; then
-    set --
-  fi
-
-  echo "$@"
+  echo "${creds[@]}"
 }
 
 function accpl.__get_joomla_root() {
@@ -515,7 +500,7 @@ function accpl.__get_symfony_root() {
 }
 
 function accpl.__get_wordpress_creds() {
-  local wp_root
+  local wp_root creds
 
   wp_root="$(accpl.__get_wordpress_root)"
   # DB_NAME DB_PASSWORD DB_USER
@@ -523,9 +508,9 @@ function accpl.__get_wordpress_creds() {
   # set $(php -r "require('$wp_root/wp-config.php'); print DB_NAME.' '.DB_PASSWORD.' '.DB_USER;");
   # Pipe to sort, to ensure: DB_NAME, DB_PASSWORD, DB_USER order.
   if [[ -f "$wp_root/local-config.php" ]]; then
-    set -- $(egrep 'DB_(NAME|USER|PASSWORD)' "$wp_root/local-config.php" | sort | cut -d \' -f 4)
+    creds=( "$(grep -E 'DB_(NAME|USER|PASSWORD)' "$wp_root/local-config.php" | sort | cut -d \' -f 4)" )
   elif [[ -f "$wp_root/wp-config.php" ]]; then
-    set -- $(egrep 'DB_(NAME|USER|PASSWORD)' "$wp_root/wp-config.php"    | sort | cut -d \' -f 4)
+    creds=( "$(grep -E 'DB_(NAME|USER|PASSWORD)' "$wp_root/wp-config.php"    | sort | cut -d \' -f 4)" )
   fi
 
   # This will fail if any of the results has whitespace
@@ -533,7 +518,7 @@ function accpl.__get_wordpress_creds() {
     set --
   fi
 
-  echo "$@"
+  echo "${creds[@]}"
 }
 
 function accpl.__get_wordpress_root() {
@@ -579,55 +564,58 @@ function accpl.__get_sassdir() {
 }
 
 function accpl.c() {
-  # $1 = $dbname, $2 = $dbpassword, $3 = $dbusername
-  set -- $(accpl.__get_mysql_creds)
+  local dbname dbpassword dbusername
 
-  if accpl.__db_query "CREATE DATABASE IF NOT EXISTS $1 COLLATE 'utf8_general_ci'" mysql root; then
-    accpl.__db_query "GRANT ALL PRIVILEGES ON $1.* TO '$3'@'localhost' IDENTIFIED BY '$2'" mysql root
+  read -r dbname dbpassword dbusername <<< "$(accpl.__get_mysql_creds)"
+
+  if accpl.__db_query "CREATE DATABASE IF NOT EXISTS $dbname COLLATE 'utf8_general_ci'" mysql root; then
+    accpl.__db_query "GRANT ALL PRIVILEGES ON $dbname.* TO '$dbusername'@'localhost' IDENTIFIED BY '$dbpassword'" mysql root
   else
-    errcho "Creation of: '$1' FAILED"
+    errcho "Creation of: '$dbname' FAILED"
     exit 1
   fi
 
-  errcho "Created: '$1' successfully"
+  errcho "Created: '$dbname' successfully"
 }
 
 function accpl.drop() {
-  # $1 = $dbname, $2 = $dbpassword, $3 = $dbusername
-  set -- $(accpl.__get_mysql_creds)
+  local dbname dbpassword dbusername
 
-  if accpl.__db_query "DROP DATABASE $1" mysql root; then
-    accpl.__db_query "DROP USER '$3'@'localhost'" mysql root
+  read -r dbname dbpassword dbusername <<< "$(accpl.__get_mysql_creds)"
+
+  if accpl.__db_query "DROP DATABASE $dbname" mysql root; then
+    accpl.__db_query "DROP USER '$dbusername'@'localhost'" mysql root
   else
-    errcho "Destruction of: '$1' FAILED"
+    errcho "Destruction of: '$dbname' FAILED"
     exit 1
   fi
 
-  errcho "Destroyed: '$1' successfully"
+  errcho "Destroyed: '$dbname' successfully"
 }
 
 function accpl.p() {
-  # $1 = $dbname, $2 = $dbpassword, $3 = $dbusername
-  set -- $(accpl.__get_mysql_creds)
+  local dbname dbpassword dbusername new_mysql_passwd
 
-  if [[ "$(accpl.__db_query "SELECT COUNT(*) FROM mysql.user WHERE User='$3'" mysql root | tail -1)" = "1" ]]; then
+  read -r dbname dbpassword dbusername <<< "$(accpl.__get_mysql_creds)"
+
+  if [[ "$(accpl.__db_query "SELECT COUNT(*) FROM mysql.user WHERE User='$dbusername'" mysql root | tail -1)" = "1" ]]; then
     stty -echo
-    read -r -p "New MySQL password for '$3': " new_mysql_passwd
+    read -r -p "New MySQL password for '$dbusername': " new_mysql_passwd
     stty echo
     echo
 
-    if accpl.__db_query "SET PASSWORD FOR '$3'@'localhost' = PASSWORD('$new_mysql_passwd')" mysql root; then
-      errcho "Password change for: '$3' successful"
+    if accpl.__db_query "SET PASSWORD FOR '$dbusername'@'localhost' = PASSWORD('$new_mysql_passwd')" mysql root; then
+      errcho "Password change for: '$dbusername' successful"
     fi
   else
-    errcho "User: '$3' does not seem to exist"
+    errcho "User: '$dbusername' does not seem to exist"
     exit 1
   fi
 }
 
 function accpl.l() {
   # Empty query, gets mysql shell
-  accpl.q
+  accpl.q "$@"
 }
 
 function accpl.q() {
@@ -683,7 +671,7 @@ function accpl.si() {
 }
 
 function accpl.dump() {
-  local now branch_name git_root dest_file_base
+  local now branch_name git_root dest_file_base dbname dbpassword dbusername
 
   now="$(date '+%Y-%m-%d_%H-%M-%S')"
   branch_name="$(accpl.__get_git_current_branch)"
@@ -708,9 +696,8 @@ function accpl.dump() {
     errcho "... and gzip-ing"
     gzip "${dest_file_base}.sql"
   else
-    # $1 = $dbname, $2 = $dbpassword, $3 = $dbusername
-    set -- $(accpl.__get_mysql_creds)
-    mysqldump -u"$3" -p"$2" "$1" --skip-extended-insert | gzip - > "${dest_file_base}.sql.gz"
+    read -r dbname dbpassword dbusername <<< "$(accpl.__get_mysql_creds)"
+    mysqldump -u"$dbusername" -p"$dbpassword" "$dbname" --skip-extended-insert | gzip - > "${dest_file_base}.sql.gz"
   fi
 
   errcho
@@ -718,14 +705,16 @@ function accpl.dump() {
 }
 
 function accpl.seed() {
-  local CAT
+  local CAT dbname dbpassword dbusername
 
   [[ -z "$1" ]] || [[ ! -f "$1" ]] && errcho "$1 NOT valid!" && exit 1
 
   case "$1" in
+    *.7z)   CAT="7z e -so";;
+    *.bz2)  CAT="bunzip2 -c";;
     *.gz)   CAT="gunzip -c";;
     *.zip)  CAT="unzip -p";;
-    *)      CAT=cat;;
+    *)      CAT="cat";;
   esac
 
   errcho "Seeding from: $1"
@@ -738,10 +727,12 @@ function accpl.seed() {
     accpl.__call_wp_cli db create
     $CAT "$1" | accpl.__call_wp_cli db import -
   else
-    local infile="$1"
-    # $1 = $dbname, $2 = $dbpassword, $3 = $dbusername
-    set -- $(accpl.__get_mysql_creds)
-    $CAT "$infile" | mysql -u"$3" -p"$2" "$1"
+    read -r dbname dbpassword dbusername <<< "$(accpl.__get_mysql_creds)"
+    if mysqlshow -u"$dbusername" -p"$dbpassword" "$dbname" > /dev/null 2>&1; then
+      accpl.drop
+      accpl.c
+    fi
+    $CAT "$1" | mysql -u"$dbusername" -p"$dbpassword" "$dbname"
   fi
 }
 
@@ -771,7 +762,7 @@ function accpl.addme() {
         accpl.__call_drush user-add-role "$role" "$uid"
       done <<< "$roles"
 
-      if accpl.__call_drush pm-list --pipe --type=module --status=enabled --no-core | egrep '\bemail_registration\b' > /dev/null 2>&1; then
+      if accpl.__call_drush pm-list --pipe --type=module --status=enabled --no-core | grep -E '\bemail_registration\b' > /dev/null 2>&1; then
         errcho "*************************************************************************************** "
         errcho "***** The 'email_registration' module is enabled. Use your email address to login ***** "
         errcho "*************************************************************************************** "
@@ -995,7 +986,7 @@ function accpl.fp() {
     fi
   elif accpl.__is_linux; then
     # NOTE: adding a group doesn't show until user logs out and back in.
-    if ! groups | egrep "\b$apache_group\b" > /dev/null; then
+    if ! groups | grep -E "\\b$apache_group\\b" > /dev/null; then
       accpl.__verbose_run sudo usermod -a -G "$apache_group" "$USER"
     fi
   else
@@ -1047,9 +1038,9 @@ function accpl.ssh() {
   SSH="echo"
   if [[ -f "$cap_conf" ]]; then
     # config/deploy/prod.rb:15:ssh_options[:user] = 'deploy'
-    user="$(git grep "ssh_options\[:user\]" "$cap_conf" | egrep -o "('|\")[^'\"]+('|\")" | sed 's/[^0-9a-zA-Z.-]//g')"
+    user="$(git grep "ssh_options\\[:user\\]" "$cap_conf" | grep -E -o "('|\")[^'\"]+('|\")" | sed 's/[^0-9a-zA-Z.-]//g')"
     # config/deploy/prod.rb:8:set :gateway, 'xxx.xxx.xxx.xxx'
-    gateway="$(git grep ":gateway" "$cap_conf" | egrep -o "('|\")[^'\"]+('|\")" | sed 's/[^0-9a-zA-Z.-]//g')"
+    gateway="$(git grep ":gateway" "$cap_conf" | grep -E -o "('|\")[^'\"]+('|\")" | sed 's/[^0-9a-zA-Z.-]//g')"
     [[ ! -z "$user" ]] && [[ ! -z "$gateway" ]] && SSH=ssh
     $SSH "$user@$gateway"
   else
@@ -1078,16 +1069,16 @@ function accpl.genssl() {
   #Optional
   password=dummypassword
   # Step 1: Generate a Private Key
-  openssl genrsa -des3 -passout pass:$password -out ${domain}.key 2048 -noout
+  openssl genrsa -des3 -passout pass:$password -out "${domain}.key" 2048 -noout
   # Step 2: Generate a CSR (Certificate Signing Request)
-  openssl req -new -key ${domain}.key -out ${domain}.csr -passin pass:$password \
+  openssl req -new -key "${domain}.key" -out "${domain}.csr" -passin pass:$password \
     -subj "/C=$C/ST=$ST/L=$L/O=$O/OU=$OU/CN=$CN/emailAddress=$emailAddress"
   # Step 3: Remove Passphrase from Key. Comment the line out to keep the passphrase
-  openssl rsa -in ${domain}.key -passin pass:$password -out ${domain}.key
+  openssl rsa -in "${domain}.key" -passin "pass:$password" -out "${domain}.key"
   # Step 4: Generating a Self-Signed Certificate
-  openssl x509 -req -days 3650 -in ${domain}.csr -signkey ${domain}.key -out ${domain}.crt
+  openssl x509 -req -days 3650 -in "${domain}.csr" -signkey "${domain}.key" -out "${domain}.crt"
 
-  ls -l ${domain}.*
+  ls -l "${domain}".*
 }
 
 function accpl.exfe() {
@@ -1157,7 +1148,7 @@ function accpl.ex() {
     option_gunzip=-t
     option_unrar=l
     option_unzip=-l
-    option_uncompress=echo
+    option_uncompress="echo"
   else
     option_tar=x
     option_gunzip=
@@ -1208,14 +1199,14 @@ function accpl.cd() {
     TMP="/tmp/drupal-$drupal_version-$$"
 
     mkdir -p "$TMP"
-    pushd "$TMP" > /dev/null
+    pushd "$TMP" > /dev/null || exit
 
     for i in $(git --git-dir="$DRUPAL_CLONE/.git" archive "$drupal_version" | tar xvf - 2>&1 | sed 's/^x //' | grep -v '/$'); do
       diff -U 0 -N -w "$i" "$drupal_root/$i"
     done | tee "$git_root/core-diff.diff"
     errcho "$(tput setaf 3)Output saved to: $(tput setaf 5)'$git_root/core-diff.diff'$(tput sgr0)"
 
-    popd > /dev/null
+    popd > /dev/null || exit
     rm -rf "$TMP"
   else
     errcho "This doesn't look like drupal" && exit 1
@@ -1244,7 +1235,7 @@ function accpl.cus() {
 #   declare -f, for function definitions
 if [[ "${BASH_SOURCE[0]}" = "${0}" ]]; then
   # Allow for function names to be sym- or hard-linked to this script
-  type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self" || {
+  { type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self"; } || {
     subcommand="$1"
     shift
   }
