@@ -329,8 +329,12 @@ else
     die "This script will no longer support the older version" 127
   else
     if brew list | grep -E -e '^php[57]' > /dev/null; then
-      show_status "Found old homebrew/php tap packages. Deleting"
+      show_status "Found old packages from the homebrew/php tap. Deleting"
       brew list | grep -E -e '^php[57]' | xargs brew rm
+      # TODO: during a test run, 'brew rm php56' failed, due to
+      # /usr/local/Cellar/php@5.6/5.6.35/var being owned by root. It seems
+      # isolated to one laptop, since the ownership was correct on another
+      # laptop.
     fi
 
     if brew tap  | grep -E homebrew/php  > /dev/null; then
@@ -713,8 +717,10 @@ for i in /usr/local/etc/php/*/php.ini; do
   show_status "Original saved to: ${i}.${NOW}-post-process"
 
   # Process ext-xdebug.ini
-  show_status "Found old ext-xdebug.ini, backed up to: $dir_path/conf.d/ext-xdebug.ini"
-  mv "$dir_path/conf.d/ext-xdebug.ini"{,-"$NOW"}
+  if [[ -f "$dir_path/conf.d/ext-xdebug.ini" ]]; then
+    show_status "Found old ext-xdebug.ini, backed up to: $dir_path/conf.d/ext-xdebug.ini"
+    mv "$dir_path/conf.d/ext-xdebug.ini"{,-"$NOW"}
+  fi
   show_status "Updating: $dir_path/conf.d/ext-xdebug.ini"
   cat <<EOT > "$dir_path/conf.d/ext-xdebug.ini"
 [xdebug]
@@ -812,11 +818,11 @@ if [[ -e "$DEST_DIR/adminer/webroot/index.php" ]]; then
   if [[ "$(grep '\* @version' "$DEST_DIR/adminer/webroot/index.php" | grep -E -o '[0-9]+.*')" != "${latest/v/}" ]]; then
     rm -f  "$DEST_DIR/adminer/webroot/index.php"
     show_status 'Updating adminer to latest version'
-    curl -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
+    curl -L -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
   fi
 else
   rm -f  "$DEST_DIR/adminer/webroot/index.php" # could be dead symlink
-  curl -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
+  curl -L -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
 fi
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
 if [[ ! -d "$DEST_DIR/slipstream/webroot" ]]; then
