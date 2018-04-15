@@ -330,7 +330,7 @@ else
   else
     if brew list | grep -E -e '^php[57]' > /dev/null; then
       show_status "Found old packages from the homebrew/php tap. Deleting"
-      brew list | grep -E -e '^php[57]' | xargs brew rm
+      brew list | grep -E -e '^php[57]' | xargs brew rm --force --ignore-dependencies
       # TODO: during a test run, 'brew rm php56' failed, due to
       # /usr/local/Cellar/php@5.6/5.6.35/var being owned by root. It seems
       # isolated to one laptop, since the ownership was correct on another
