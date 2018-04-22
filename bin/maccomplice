@@ -2,6 +2,8 @@
 
 # https://gist.github.com/waylan/4080362
 
+brew_prefix="$(brew --prefix)"
+
 function errcho() {
   # echo to strerr
   >&2 echo "$@"
@@ -65,8 +67,8 @@ Usage: $accpl_self <subcommand> [options]
     buses     Runs: brew uses --installed, on list of installed brews
     sphp      Switch php versions: $accpl_self sphp [phpversion, like: 53, or sys]
                 (Assumes: brew tap homebrew-php)
-    penmod    Enable:  Brew PHP /usr/local/etc/php/*/conf.d/ext-\$@.conf
-    pdismod   Disable: Brew PHP /usr/local/etc/php/*/conf.d/ext-\$@.conf
+    penmod    Enable:  Brew PHP $brew_prefix/etc/php/*/conf.d/ext-\$@.conf
+    pdismod   Disable: Brew PHP $brew_prefix/etc/php/*/conf.d/ext-\$@.conf
 
   Misc.
     cgu       Run: composer global update
@@ -147,15 +149,15 @@ function accpl.ra() {
   httpd_path=/usr/sbin/httpd
   apachectl_path=/usr/sbin/apachectl
 
-  pgrep -f /usr/sbin/httpd            2> /dev/null > /dev/null && is_sys="true"
-  pgrep -f /usr/local/Cellar/*/httpd  2> /dev/null > /dev/null && is_brew="true"
+  pgrep -f "/usr/sbin/httpd"              2> /dev/null > /dev/null && is_sys="true"
+  pgrep -f "$brew_prefix/Cellar/"*/httpd  2> /dev/null > /dev/null && is_brew="true"
 
   if [[ ! -z "$is_sys" ]]; then
     message="Restarting system Apache..."
   elif [[ ! -z "$is_brew" ]]; then
     message="Restarting homebrew Apache..."
-    httpd_path='/usr/local/Cellar/*/httpd'
-    apachectl_path=/usr/local/bin/apachectl
+    httpd_path="$brew_prefix/Cellar/*/httpd"
+    apachectl_path="$brew_prefix/bin/apachectl"
   else
     message="Starting system Apache..."
   fi
@@ -397,8 +399,8 @@ function accpl.sphp() {
     exit 1
   fi
 
-  currentBrewPhpVersion="$([[ -d /usr/local/Cellar/php ]] && basename "$(realpath /usr/local/opt/php)" | grep -E -o '[0-9]+\.[0-9]+')"
-  validVersions="$(find /usr/local/opt/php@* -type l -exec basename {} + | grep -E -o '[0-9]+\.[0-9]+' | tr '\n' '|')"
+  currentBrewPhpVersion="$([[ -d "$brew_prefix/Cellar/php" ]] && basename "$(realpath "$brew_prefix/opt/php")" | grep -E -o '[0-9]+\.[0-9]+')"
+  validVersions="$(find "$brew_prefix/opt/"php@* -type l -exec basename {} + | grep -E -o '[0-9]+\.[0-9]+' | tr '\n' '|')"
 
   if [ $# -ne 1 ]; then
     errcho "Usage: $accpl_self sphp [${validVersions}sys]"
@@ -407,7 +409,7 @@ function accpl.sphp() {
 
   if [[ "$1" = 'sys' ]];then
     errcho "Linking system libphp5..."
-    accpl.__verbose_run ln -svf /usr/libexec/apache2/libphp5.so /usr/local/lib/libphp5.so
+    accpl.__verbose_run ln -svf /usr/libexec/apache2/libphp5.so "$brew_prefix/lib/libphp5.so"
 
     errcho "Restarting Apache..."
     accpl.ra
@@ -440,11 +442,11 @@ function accpl.sphp() {
       fi
     else
       errcho "Linking new modphp addon..."
-      accpl.__verbose_run ln -svf "/usr/local/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "/usr/local/lib/libphp${shortNew}.so"
+      accpl.__verbose_run ln -svf "$brew_prefix/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "$brew_prefix/lib/libphp${shortNew}.so"
 
       errcho "Fixing LoadModule..."
-      [[ ! -d "/usr/local/var/run/apache2" ]] && mkdir -p "/usr/local/var/run/apache2"
-      accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "/usr/local/var/run/apache2/php.conf"
+      [[ ! -d "$brew_prefix/var/run/apache2" ]] && mkdir -p "$brew_prefix/var/run/apache2"
+      accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "$brew_prefix/var/run/apache2/php.conf"
     fi
 
     errcho "Restarting Apache..."
@@ -462,7 +464,7 @@ function accpl.penmod() {
 
   for mod in "$@"; do
     for ini in /etc/homebrew/etc/php/*/conf.d/ext-${mod}.ini; do
-      target="${ini/\/etc\/homebrew//usr/local}"
+      target="${ini/\/etc\/homebrew/$brew_prefix}"
 
       if [[ ! -e "$target" ]]; then
         ln -svf "$ini" "$target"
@@ -481,7 +483,7 @@ function accpl.pdismod() {
   local mod target ini
 
   for mod in "$@"; do
-    for ini in /usr/local/etc/php/*/conf.d/ext-${mod}.ini; do
+    for ini in $brew_prefix/etc/php/*/conf.d/ext-${mod}.ini; do
       target="$(readlink "$ini")"
 
       if [[ -z "$target" ]]; then
