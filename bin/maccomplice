@@ -19,10 +19,8 @@ function accpl.help() {
 Usage: $accpl_self <subcommand> [options]
 
   System Helper Subcommands:
-    ra        Restart Apache
     rd        Restart DnsMasq/mDNSResponder
     rm        Restart MariaDB/MySQL
-    rp        Restart PHP-FPM
 
     rdk       Restart Dock
     rf        Restart Finder
@@ -65,8 +63,6 @@ Usage: $accpl_self <subcommand> [options]
     buu       Run: brew update --verbose; brew upgrade --all; brew cleanup -n -s
     bdeps     Runs: brew deps (dependencis,) on list of installed brews
     buses     Runs: brew uses --installed, on list of installed brews
-    sphp      Switch php versions: $accpl_self sphp [phpversion, like: 53, or sys]
-                (Assumes: brew tap homebrew-php)
     penmod    Enable:  Brew PHP $brew_prefix/etc/php/*/conf.d/ext-\$@.conf
     pdismod   Disable: Brew PHP $brew_prefix/etc/php/*/conf.d/ext-\$@.conf
 
@@ -144,32 +140,8 @@ function accpl.__reload_plist() {
 }
 
 function accpl.ra() {
-  local is_brew is_sys httpd_path apachectl_path message
-
-  httpd_path=/usr/sbin/httpd
-  apachectl_path=/usr/sbin/apachectl
-
-  pgrep -f "/usr/sbin/httpd"              2> /dev/null > /dev/null && is_sys="true"
-  pgrep -f "$brew_prefix/Cellar/"*/httpd  2> /dev/null > /dev/null && is_brew="true"
-
-  if [[ ! -z "$is_sys" ]]; then
-    message="Restarting system Apache..."
-  elif [[ ! -z "$is_brew" ]]; then
-    message="Restarting homebrew Apache..."
-    httpd_path="$brew_prefix/Cellar/*/httpd"
-    apachectl_path="$brew_prefix/bin/apachectl"
-  else
-    message="Starting system Apache..."
-  fi
-
-  errcho "$message"
-  accpl.__verbose_run sudo pkill -9 -f "$httpd_path"
-  accpl.__verbose_run sudo "$apachectl_path" -k start
-
-  errcho "PID(s):"
-  pgrep -f "$httpd_path"
-
-  accpl.rp
+  errcho "Restart Apache (ra) moved to accomplice"
+  exit 127
 }
 
 function accpl.rd() {
@@ -188,18 +160,8 @@ function accpl.rm() {
 }
 
 function accpl.rp() {
-  local service stopped version
-
-  while read -r -u3 service && [[ ! -z "$service" ]]; do
-    stopped="$service"
-    brew services stop "$stopped"
-  done 3< <(brew services list | grep -E '^php[@]*[57]*' | grep ' started ' | cut -f1 -d' ')
-
-  version="${1:-$stopped}"
-  version="${version:-56}"
-
-  accpl.__brew services start "${version}"
-  accpl.__brew services list
+  errcho "Restart PHP-FPM (rp) moved to accomplice"
+  exit 127
 }
 
 # http://www.thxbye.de/mac/mac-restarting-the-mac-os-x-dock-finder-spaces-or-menubar.html
@@ -384,79 +346,8 @@ function accpl.buses() {
 }
 
 function accpl.sphp() {
-  # https://raw.githubusercontent.com/conradkleinespel/sphp-osx/master/sphp
-  # https://coderwall.com/p/nm_wna
-  local currentversion newversion shortOld shortNew
-  local currentBrewVersion currentBrewPhpVersion validVersions
-
-  # https://brew.sh/2018/01/19/homebrew-1.5.0/
-  currentBrewVersion="$(brew --version | grep -E -o ' [0-9]+\.[0-9]+')"
-
-  # If slipstream.bash was used to setup, coreutils (which contains gsort) will be available
-  if [[ "$(echo -e "$currentBrewVersion\\n 1.4" | gsort -V -r | head -1)" = ' 1.4' ]]; then
-    errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
-    errcho "This script will no longer support the older version"
-    exit 1
-  fi
-
-  currentBrewPhpVersion="$([[ -d "$brew_prefix/Cellar/php" ]] && basename "$(realpath "$brew_prefix/opt/php")" | grep -E -o '[0-9]+\.[0-9]+')"
-  validVersions="$(find "$brew_prefix/opt/"php@* -type l -exec basename {} + | grep -E -o '[0-9]+\.[0-9]+' | tr '\n' '|')"
-
-  if [ $# -ne 1 ]; then
-    errcho "Usage: $accpl_self sphp [${validVersions}sys]"
-    exit 1
-  fi
-
-  if [[ "$1" = 'sys' ]];then
-    errcho "Linking system libphp5..."
-    accpl.__verbose_run ln -svf /usr/libexec/apache2/libphp5.so "$brew_prefix/lib/libphp5.so"
-
-    errcho "Restarting Apache..."
-    accpl.ra
-
-    return
-  fi
-
-  currentversion="$(php -r "echo substr(phpversion(), 0, 3);")"
-  newversion="$1"
-
-  # shellcheck disable=SC2034
-  shortOld="$(php -r "echo substr(phpversion(), 0, 1);")"
-  shortNew="$(php -r "echo substr('$1', 0, 1);")"
-
-  if accpl.__brew list "php@${newversion}" 2> /dev/null > /dev/null; then
-    errcho "PHP version $newversion found"
-
-    errcho "Unlinking old binaries for ${currentversion} ..."
-    accpl.__brew unlink "php@${currentversion}"
-
-    errcho "Linking new binaries for ${newversion} ..."
-    accpl.__brew unlink "php@${newversion}" 2> /dev/null > /dev/null
-    accpl.__brew link --overwrite --force "php@${newversion}"
-
-    if accpl.__brew services list | grep -E '^php[@]*[57]*' 2> /dev/null > /dev/null; then
-      if [[ "$newversion" = "$currentBrewPhpVersion" ]]; then
-        accpl.rp "php"
-      else
-        accpl.rp "php@${newversion}"
-      fi
-    else
-      errcho "Linking new modphp addon..."
-      accpl.__verbose_run ln -svf "$brew_prefix/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "$brew_prefix/lib/libphp${shortNew}.so"
-
-      errcho "Fixing LoadModule..."
-      [[ ! -d "$brew_prefix/var/run/apache2" ]] && mkdir -p "$brew_prefix/var/run/apache2"
-      accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "$brew_prefix/var/run/apache2/php.conf"
-    fi
-
-    errcho "Restarting Apache..."
-    accpl.ra
-
-    errcho "Done."
-  else
-    errcho "PHP version $newversion was not found."
-    exit 1
-  fi
+  errcho "Switch php (sphp) moved to accomplice"
+  exit 127
 }
 
 function accpl.penmod() {
