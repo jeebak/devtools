@@ -575,9 +575,9 @@ function accpl.__get_sassdir() {
 function accpl.ra() {
   local httpd_path apachectl_path
 
-  # Preferentially use brew (not trusting
-  httpd_path="$(    command ls "$brew_prefix/opt/httpd/bin/httpd" 2> /dev/null || command ls /usr/sbin/httpd      2> /dev/null)"
-  apachectl_path="$(command ls "$brew_prefix/bin/apachectl"       2> /dev/null || command ls /usr/sbin/apachectl  2> /dev/null)"
+  # Preferentially use system apache since slipstream uses it (not trusting user $PATH)
+  httpd_path="$(    command ls /usr/sbin/httpd      2> /dev/null || command ls "$brew_prefix/opt/httpd/bin/httpd" 2> /dev/null)"
+  apachectl_path="$(command ls /usr/sbin/apachectl  2> /dev/null || command ls "$brew_prefix/bin/apachectl"       2> /dev/null)"
 
   if [[ -z "$httpd_path" ]] || [[ -z "$apachectl_path" ]]; then
     errcho "Y U NO have httpd or apachectl?!"
