@@ -3,6 +3,8 @@
 # https://gist.github.com/waylan/4080362
 # drush sql-create --db-su=root --db-su-pw=root  ${PWD##/*/} | sed 's/-//g')
 
+brew_prefix="$(brew --prefix)"
+
 function errcho() {
   # echo to strerr
   >&2 echo "$@"
@@ -15,6 +17,11 @@ confdir="${XDG_CONFIG_HOME:-$HOME/.config}/$destdir"
 function accpl.help() {
   cat <<EOT
 Usage: $accpl_self <subcommand> [options]
+
+  System Helper Subcommands:
+    ra        Restart Apache
+    rp        Restart PHP-FPM
+    sphp      Switch php versions: $accpl_self sphp [phpversion, like: 5.6, 7.1]
 
   MySQL Helper Subcommands:
     c         Create DB based on drupal/joomla/wp creds, or \$PWD
@@ -563,6 +570,137 @@ function accpl.__get_sassdir() {
   echo "$git_root/${sassdir%/*}"
 }
 
+# System Helper Subcommands:
+
+function accpl.ra() {
+  local httpd_path apachectl_path
+
+  # Preferentially use brew (not trusting
+  httpd_path="$(    command ls "$brew_prefix/opt/httpd/bin/httpd" 2> /dev/null || command ls /usr/sbin/httpd      2> /dev/null)"
+  apachectl_path="$(command ls "$brew_prefix/bin/apachectl"       2> /dev/null || command ls /usr/sbin/apachectl  2> /dev/null)"
+
+  if [[ -z "$httpd_path" ]] || [[ -z "$apachectl_path" ]]; then
+    errcho "Y U NO have httpd or apachectl?!"
+    exit 127
+  fi
+
+  errcho "Restarting Apache..."
+  pgrep -f "/usr/sbin/httpd"  2> /dev/null > /dev/null && accpl.__verbose_run sudo pkill -9 -f "/usr/sbin/httpd"
+  pgrep -f "$httpd_path"      2> /dev/null > /dev/null && accpl.__verbose_run sudo pkill -9 -f "$httpd_path"
+
+  accpl.__verbose_run sudo "$apachectl_path" -k start
+
+  errcho "PID(s):"
+  pgrep -f "$httpd_path"
+
+  accpl.rp
+}
+
+function accpl.rp() {
+  local service stopped version
+
+  if accpl.__is_linux; then
+    killall php-fpm 2> /dev/null
+    ("$brew_prefix/sbin/php-fpm" &)
+    return
+  fi
+
+  while read -r -u3 service && [[ ! -z "$service" ]]; do
+    stopped="$service"
+    brew services stop "$stopped"
+  done 3< <(brew services list | grep -E '^php[@]*[57]*' | grep ' started ' | cut -f1 -d' ')
+
+  version="${1:-$stopped}"
+  version="${version:-56}"
+
+  accpl.__verbose_run brew services start "${version}"
+  accpl.__verbose_run brew services list
+}
+
+function accpl.sphp() {
+  # https://raw.githubusercontent.com/conradkleinespel/sphp-osx/master/sphp
+  # https://coderwall.com/p/nm_wna
+  local currentversion newversion shortOld shortNew
+  local currentBrewVersion currentBrewPhpVersion validVersions GSORT
+
+  GSORT="$(command -v gsort || sort --version | grep -o 'GNU coreutils' > /dev/null && command -v sort)"
+  if [[ -z "$GSORT" ]]; then
+    errcho "Y U NO have GNU sort?!"
+    exit 1
+  fi
+
+  # https://brew.sh/2018/01/19/homebrew-1.5.0/
+  currentBrewVersion="$(brew --version | grep -E -o ' [0-9]+\.[0-9]+')"
+
+  # If slipstream.bash was used to setup, coreutils (which contains gsort) will be available
+  if [[ "$(echo -e "$currentBrewVersion\\n 1.4" | "$GSORT" -V -r | head -1)" = ' 1.4' ]]; then
+    errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
+    errcho "This script will no longer support the older version"
+    exit 1
+  fi
+
+  currentBrewPhpVersion="$([[ -d "$brew_prefix/Cellar/php" ]] && basename "$(realpath "$brew_prefix/opt/php")" | grep -E -o '[0-9]+\.[0-9]+')"
+  validVersions="$(find "$brew_prefix/opt/"php@* -type l -exec basename {} \; | grep -E -o '[0-9]+\.[0-9]+' | tr '\n' '|')"
+
+  if [ $# -ne 1 ]; then
+    errcho "Usage: $accpl_self sphp [${validVersions}sys]"
+    exit 1
+  fi
+
+  if [[ "$1" = 'sys' ]];then
+    errcho "Linking system libphp5..."
+    accpl.__verbose_run ln -svf /usr/libexec/apache2/libphp5.so "$brew_prefix/lib/libphp5.so"
+
+    errcho "Restarting Apache..."
+    accpl.ra
+
+    return
+  fi
+
+  currentversion="$(php -r "echo substr(phpversion(), 0, 3);")"
+  newversion="$1"
+
+  # shellcheck disable=SC2034
+  shortOld="$(php -r "echo substr(phpversion(), 0, 1);")"
+  shortNew="$(php -r "echo substr('$1', 0, 1);")"
+
+  if accpl.__verbose_run brew list "php@${newversion}" 2> /dev/null > /dev/null; then
+    errcho "PHP version $newversion found"
+
+    errcho "Unlinking old binaries for ${currentversion} ..."
+    accpl.__verbose_run brew unlink "php@${currentversion}"
+
+    errcho "Linking new binaries for ${newversion} ..."
+    accpl.__verbose_run brew unlink "php@${newversion}" 2> /dev/null > /dev/null
+    accpl.__verbose_run brew link --overwrite --force "php@${newversion}"
+
+    if accpl.__is_linux || accpl.__verbose_run brew services list | grep -E '^php[@]*[57]*' 2> /dev/null > /dev/null; then
+      if [[ "$newversion" = "$currentBrewPhpVersion" ]]; then
+        accpl.rp "php"
+      else
+        accpl.rp "php@${newversion}"
+      fi
+    else
+      errcho "Linking new modphp addon..."
+      accpl.__verbose_run ln -svf "$brew_prefix/opt/php${newversion}/libexec/apache2/libphp${shortNew}.so" "$brew_prefix/lib/libphp${shortNew}.so"
+
+      errcho "Fixing LoadModule..."
+      [[ ! -d "$brew_prefix/var/run/apache2" ]] && mkdir -p "$brew_prefix/var/run/apache2"
+      accpl.__verbose_run ln -svf "/etc/homebrew/etc/apache2/php${shortNew}.conf" "$brew_prefix/var/run/apache2/php.conf"
+    fi
+
+    errcho "Restarting Apache..."
+    accpl.ra
+
+    errcho "Done."
+  else
+    errcho "PHP version $newversion was not found."
+    exit 1
+  fi
+}
+
+# MySQL Helper Subcommands:
+
 function accpl.c() {
   local dbname dbpassword dbusername
 
@@ -639,6 +777,8 @@ function accpl.f() {
   accpl.run_query "FLUSH PRIVILEGES" mysql root
 }
 
+# Drupal Only: (\$dr == \$drupal_root)
+
 function accpl.si() {
   local clean_mysql_db drush_output drupal_root
 
@@ -669,6 +809,8 @@ function accpl.si() {
 
   # cd ${GIT_PREFIX:-.} && git init . && git add . && git commit -m 'Initial commit'
 }
+
+# CMS (Drupal/Joomla/WordPress) Helper Subcommands: (\$dr == \$drupal_root)
 
 function accpl.dump() {
   local now branch_name git_root dest_file_base dbname dbpassword dbusername
@@ -823,6 +965,8 @@ function accpl.dls() {
     errcho "There doesn't seem to be a $drupal_root/sites/default/ folder"
   fi
 }
+
+# Apache Helper Subcommands:
 
 function accpl.adb() {
   accpl.__call_apachectl -S
@@ -1029,6 +1173,8 @@ function accpl.els() {
     "$git_editor" "$settings_file"
   fi
 }
+
+# Misc. Helper Subcommands:
 
 function accpl.ssh() {
   local branch cap_conf SSH user gateway
