@@ -623,7 +623,7 @@ function accpl.sphp() {
   local currentversion newversion shortOld shortNew
   local currentBrewVersion currentBrewPhpVersion validVersions GSORT
 
-  GSORT="$(command -v gsort || sort --version | grep -o 'GNU coreutils' > /dev/null && command -v sort)"
+  GSORT="$(command -v gsort || { sort --version | grep -o 'GNU coreutils' > /dev/null && command -v sort; })"
   if [[ -z "$GSORT" ]]; then
     errcho "Y U NO have GNU sort?!"
     exit 1
