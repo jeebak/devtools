@@ -470,6 +470,10 @@ for i in \
   sudo sed -i .bak "s;#.*${i}\\(.*\\);${i}\\1;" /etc/apache2/httpd.conf
 done
 
+sudo sed -i .bak "s;^Listen 80.*$;Listen 80;"     "/etc/apache2/httpd.conf"
+sudo sed -i .bak "s;^User .*$;User $USER;"        "/etc/apache2/httpd.conf"
+sudo sed -i .bak "s;^Group .*$;Group $(id -gn);"  "/etc/apache2/httpd.conf"
+
 DEST_DIR="/Users/$USER/Sites"
 
 [[ ! -d "$DEST_DIR" ]] && mkdir -p "$DEST_DIR"
