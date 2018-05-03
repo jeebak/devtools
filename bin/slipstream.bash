@@ -89,9 +89,8 @@ function clean() {
 
 # Process install
 function process() {
-  local brew_php_linked brew_prefix debug extra line pecl_pkg num_ver
+  local brew_php_linked debug extra line pecl_pkg num_ver
 
-  brew_prefix="$(brew --prefix)"
   debug="$([[ ! -z "$DEBUG" ]] && echo echo)"
 
   # Compare what is already installed with what we want installed
@@ -107,7 +106,9 @@ function process() {
         line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
         $debug brew install "${line[@]}";;
       'brew php')
-        brew_php_linked="$(qte cd "$brew_prefix/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
+        [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
+
+        brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
         num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+')"
 
         if [[ ! -z "$brew_php_linked" ]]; then
@@ -117,18 +118,18 @@ function process() {
         fi
 
         # Wipe the slate clean
-        if [[ -f "$brew_prefix/etc/php/$num_ver/php.ini" ]]; then
-          show_status "Found old php.ini, backed up to: $brew_prefix/etc/php/$num_ver/php.ini-$NOW"
-          mv "$brew_prefix/etc/php/$num_ver/php.ini"{,-"$NOW"}
+        if [[ -f "$BREW_PREFIX/etc/php/$num_ver/php.ini" ]]; then
+          show_status "Found old php.ini, backed up to: $BREW_PREFIX/etc/php/$num_ver/php.ini-$NOW"
+          mv "$BREW_PREFIX/etc/php/$num_ver/php.ini"{,-"$NOW"}
         fi
-        rm -rf "$brew_prefix/share/${line/php/pear}"
+        rm -rf "$BREW_PREFIX/share/${line/php/pear}"
 
         $debug brew install "${line[@]}"
         $debug brew link --overwrite --force "$line"
 
         show_status "Installing PECLs for: $line"
 
-        $debug "$brew_prefix/opt/$line/bin/pecl" channel-update pecl.php.net
+        $debug "$BREW_PREFIX/opt/$line/bin/pecl" channel-update pecl.php.net
 
         # This inner loop to install pecl packages for specific php versions'
         # only run when the brew install for the specific version's run, i.e.,
@@ -142,7 +143,7 @@ function process() {
               # TODO: refine this for multiple versions
               pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
               show_status "PECL: Installing: $pecl_pkg"
-              "$brew_prefix/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
+              "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
             else
               pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
               show_status "PECL: Installing: $pecl_pkg"
@@ -150,7 +151,7 @@ function process() {
                   CFLAGS='-fgnu89-inline' \
                   LDFLAGS='-fgnu89-inline' \
                   CXXFLAGS='-fgnu89-inline' \
-                "$brew_prefix/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
+                "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
             fi
           fi
         done 4< <(get_pkgs "pecl")
@@ -167,7 +168,7 @@ function process() {
 
         # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
         if qt command -v csrutil && csrutil status | qt grep enabled; then
-          extra=(-n $brew_prefix/bin)
+          extra=(-n $BREW_PREFIX/bin)
         fi
 
         line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
@@ -322,7 +323,8 @@ else
     die "Hmm... Old version of brew detected. You may want to run: brew update; brew upgrade; and re-run this script when done" 127
   fi
 
-  brew_prefix="$(brew --prefix)"
+  BREW_PREFIX="$(brew --prefix)"
+  export BREW_PREFIX
 
   # https://brew.sh/2018/01/19/homebrew-1.5.0/
   currentBrewVersion="$(brew --version | grep -E -o '[0-9]+\.[0-9]+')"
@@ -335,7 +337,7 @@ else
       show_status "Found old packages from the homebrew/php tap. Deleting"
       brew list | grep -E -e '^php[57]' | xargs brew rm --force --ignore-dependencies
       # TODO: during a test run, 'brew rm php56' failed, due to
-      # $brew_prefix/Cellar/php@5.6/5.6.35/var being owned by root. It seems
+      # $BREW_PREFIX/Cellar/php@5.6/5.6.35/var being owned by root. It seems
       # isolated to one laptop, since the ownership was correct on another
       # laptop.
     fi
@@ -344,11 +346,12 @@ else
       show_status "Found old homebrew/php tap. Deleting"
       brew untap homebrew/php
     fi
-    find "$brew_prefix/etc/php" -name ext-mcrypt.ini -delete
+    find "$BREW_PREFIX/etc/php" -name ext-mcrypt.ini -delete
   fi
 fi
 
-brew_prefix="$(brew --prefix)"
+BREW_PREFIX="$(brew --prefix)"
+export BREW_PREFIX
 
 show_status "brew tap"
 process "brew tap"
@@ -399,9 +402,9 @@ echo "== Processing MariaDB =="
 
 # brew info mariadb
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
-if qt ls "$brew_prefix/opt/mariadb/"*.plist && ! qt ls ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist; then
+if qt ls "$BREW_PREFIX/opt/mariadb/"*.plist && ! qt ls ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist; then
   show_status 'Linking MariaDB LaunchAgent plist'
-  ln -sfv "$brew_prefix/opt/mariadb/"*.plist ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist
+  ln -sfv "$BREW_PREFIX/opt/mariadb/"*.plist ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist
 fi
 
 [[ ! -d /etc/homebrew/etc/my.cnf.d ]] && sudo mkdir -p /etc/homebrew/etc/my.cnf.d
@@ -434,8 +437,8 @@ bind-address = 127.0.0.1
 key_buffer_size = 256M
 EOT
 
-  show_status "Linking to: $brew_prefix/etc/my.cnf.d/mysqld_innodb.cnf"
-  ln -svf /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf "$brew_prefix/etc/my.cnf.d/mysqld_innodb.cnf"
+  show_status "Linking to: $BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
+  ln -svf /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
   etc_git_commit "git add homebrew" "Add homebrew/etc/my.cnf.d/mysqld_innodb.cnf"
 fi
 
@@ -494,11 +497,11 @@ PHP_FPM_HANDLER="fcgi://${PHP_FPM_LISTEN}"
 PHP_FPM_PROXY="fcgi://${PHP_FPM_LISTEN}"
 
 # Since port 9000 is also the default port for xdebug, so lets use...
-PHP_FPM_LISTEN="$brew_prefix/var/run/php-fpm.sock"
+PHP_FPM_LISTEN="$BREW_PREFIX/var/run/php-fpm.sock"
 PHP_FPM_HANDLER="proxy:unix:$PHP_FPM_LISTEN|fcgi://localhost/"
 PHP_FPM_PROXY="fcgi://localhost/"
 
-[[ ! -d "$brew_prefix/var/run" ]] && mkdir -p "$brew_prefix/var/run"
+[[ ! -d "$BREW_PREFIX/var/run" ]] && mkdir -p "$BREW_PREFIX/var/run"
 
 if [[ -f /etc/apache2/extra/dev.conf ]]; then
   etc_git_commit "git rm apache2/extra/dev.conf" "Remove apache2/extra/dev.conf"
@@ -643,12 +646,12 @@ fi
 echo "== Processing Dnsmasq =="
 
 # dnsmasq (add note to /etc/hosts)
-#  add symlinks as non-root to $brew_prefix/etc files
+#  add symlinks as non-root to $BREW_PREFIX/etc files
 
-if qt ls "$brew_prefix/opt/dnsmasq/"*.plist && ! qt ls /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist; then
+if qt ls "$BREW_PREFIX/opt/dnsmasq/"*.plist && ! qt ls /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist; then
   show_status 'Linking Dnsmasq LaunchAgent plist'
   # brew info dnsmasq
-  sudo cp -fv "$brew_prefix/opt/dnsmasq/"*.plist /Library/LaunchDaemons
+  sudo cp -fv "$BREW_PREFIX/opt/dnsmasq/"*.plist /Library/LaunchDaemons
   sudo chown root /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
 fi
 
@@ -657,8 +660,8 @@ if [[ ! -f /etc/homebrew/etc/dnsmasq.conf ]] || qt grep '^address=/.dev/127.0.0.
   cat <<EOT | qt sudo tee /etc/homebrew/etc/dnsmasq.conf
 address=/.localhost/127.0.0.1
 EOT
-  show_status "Linking to: $brew_prefix/etc/dnsmasq.conf"
-  ln -svf /etc/homebrew/etc/dnsmasq.conf "$brew_prefix/etc/dnsmasq.conf"
+  show_status "Linking to: $BREW_PREFIX/etc/dnsmasq.conf"
+  ln -svf /etc/homebrew/etc/dnsmasq.conf "$BREW_PREFIX/etc/dnsmasq.conf"
 fi
 
 [[ ! -d /etc/resolver ]] && sudo mkdir /etc/resolver
@@ -698,7 +701,7 @@ echo "== Processing Brew PHP / php.ini / Xdebug =="
 
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
 
-for i in "$brew_prefix/etc/php/"*/php.ini; do
+for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
   dir_path="${i%/*}"
   version="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$i")"
 
@@ -743,10 +746,10 @@ EOT
 
   # Process php-fpm.conf for $version
   #   This is the path for 7.x, and we need to check for it 1st, because it's easier this way
-  if [[ -f "$brew_prefix/etc/php/$version/php-fpm.d/www.conf" ]]; then
-    php_fpm_conf="$brew_prefix/etc/php/$version/php-fpm.d/www.conf"
-  elif [[ -f "$brew_prefix/etc/php/$version/php-fpm.conf" ]]; then
-    php_fpm_conf="$brew_prefix/etc/php/$version/php-fpm.conf"
+  if [[ -f "$BREW_PREFIX/etc/php/$version/php-fpm.d/www.conf" ]]; then
+    php_fpm_conf="$BREW_PREFIX/etc/php/$version/php-fpm.d/www.conf"
+  elif [[ -f "$BREW_PREFIX/etc/php/$version/php-fpm.conf" ]]; then
+    php_fpm_conf="$BREW_PREFIX/etc/php/$version/php-fpm.conf"
   else
     php_fpm_conf=""
   fi
@@ -768,14 +771,14 @@ if [[ -d /etc/homebrew/etc/apache2 ]]; then
   etc_git_commit "git rm -r homebrew/etc/apache2" "Deleting homebrew/etc/apache2 for switch to php-fpm"
 fi
 
-if [[ -d "$brew_prefix/var/run/apache2" ]]; then
-  rm -rf "$brew_prefix/var/run/apache2"
+if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
+  rm -rf "$BREW_PREFIX/var/run/apache2"
 fi
 
 # Account for both newly and previously provisioned scenarios
 sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                        /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$brew_prefix/opt/php56/libexec/apache2/libphp5.so\\);# \\1;" /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\\(Include[[:space:]]\"*$brew_prefix/var/run/apache2/php.conf\\);# \\1;"                                     /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;" /etc/apache2/httpd.conf
+sudo sed -i .bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                     /etc/apache2/httpd.conf
 sudo rm /etc/apache2/httpd.conf.bak
 
 qt pushd /etc/
@@ -789,10 +792,10 @@ while read -r -u3 service && [[ ! -z "$service" ]]; do
 done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' started ' | cut -f1 -d' ')
 
 # Make php@5.6 the default
-[[ ! -d "$brew_prefix/var/log/" ]] && mkdir -p "$brew_prefix/var/log/"
+[[ ! -d "$BREW_PREFIX/var/log/" ]] && mkdir -p "$BREW_PREFIX/var/log/"
 brew services start php@5.6
 
-brew_php_linked="$(qte cd "$brew_prefix/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
+brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite --force php@5.6
