@@ -456,6 +456,8 @@ fi
 # -- SETUP APACHE -------------------------------------------------------------
 echo "== Processing Apache =="
 
+HTTPD_CONF="/etc/apache2/httpd.conf"
+
 show_status 'Updating httpd.conf settings'
 for i in \
   'LoadModule socache_shmcb_module ' \
@@ -467,12 +469,12 @@ for i in \
   'LoadModule proxy_fcgi_module ' \
   'LoadModule proxy_module ' \
 ; do
-  sudo sed -i .bak "s;#.*${i}\\(.*\\);${i}\\1;" /etc/apache2/httpd.conf
+  sudo sed -i .bak "s;#.*${i}\\(.*\\);${i}\\1;" "$HTTPD_CONF"
 done
 
-sudo sed -i .bak "s;^Listen 80.*$;Listen 80;"     "/etc/apache2/httpd.conf"
-sudo sed -i .bak "s;^User .*$;User $USER;"        "/etc/apache2/httpd.conf"
-sudo sed -i .bak "s;^Group .*$;Group $(id -gn);"  "/etc/apache2/httpd.conf"
+sudo sed -i .bak "s;^Listen 80.*$;Listen 80;"     "$HTTPD_CONF"
+sudo sed -i .bak "s;^User .*$;User $USER;"        "$HTTPD_CONF"
+sudo sed -i .bak "s;^Group .*$;Group $(id -gn);"  "$HTTPD_CONF"
 
 DEST_DIR="/Users/$USER/Sites"
 
@@ -509,12 +511,12 @@ if [[ -f /etc/apache2/extra/dev.conf ]]; then
   etc_git_commit "git rm apache2/extra/dev.conf" "Remove apache2/extra/dev.conf"
 fi
 
-if qt grep '^# Local vhost and ssl, for \*.dev$' /etc/apache2/httpd.conf; then
-  sudo sed -i .bak '/^# Local vhost and ssl, for \*.dev$/d' /etc/apache2/httpd.conf
-  sudo sed -i .bak '/Include \/private\/etc\/apache2\/extra\/dev.conf/d' /etc/apache2/httpd.conf
-  sudo rm /etc/apache2/httpd.conf.bak
+if qt grep '^# Local vhost and ssl, for \*.dev$'                          "$HTTPD_CONF"; then
+  sudo sed -i .bak '/^# Local vhost and ssl, for \*.dev$/d'               "$HTTPD_CONF"
+  sudo sed -i .bak '/Include \/private\/etc\/apache2\/extra\/dev.conf/d'  "$HTTPD_CONF"
+  sudo rm "${HTTPD_CONF}.bak"
 
-  etc_git_commit "git add /etc/apache2/httpd.conf" "Remove references to .dev from /etc/apache2/httpd.conf"
+  etc_git_commit "git add $HTTPD_CONF" "Remove references to .dev from $HTTPD_CONF"
 fi
 
 if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/localhost.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/localhost.conf || ! qt grep \\.xip\\.io /etc/apache2/extra/localhost.conf; then
@@ -538,7 +540,7 @@ if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" 
     DirectoryIndex index.html index.php
   </IfModule>
 
-  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in /etc/apache2/httpd.conf
+  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
@@ -582,7 +584,7 @@ Listen 443
     DirectoryIndex index.html index.php
   </IfModule>
 
-  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in /etc/apache2/httpd.conf
+  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
@@ -603,8 +605,8 @@ Listen 443
 </VirtualHost>
 EOT
 
-  if ! qt grep '^# Local vhost and ssl, for \*.localhost$' /etc/apache2/httpd.conf; then
-    cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
+  if ! qt grep '^# Local vhost and ssl, for \*.localhost$' "$HTTPD_CONF"; then
+    cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
 
 # Local vhost and ssl, for *.localhost
 Include /private/etc/apache2/extra/localhost.conf
@@ -621,8 +623,8 @@ else
   fi
 fi
 
-if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' /etc/apache2/httpd.conf; then
-  cat <<EOT | qt sudo tee -a /etc/apache2/httpd.conf
+if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' "$HTTPD_CONF"; then
+  cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
 
 # To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)
 Timeout 1800
@@ -630,13 +632,13 @@ EOT
 fi
 
 # Have ServerName match CN in SSL Cert
-sudo sed -i .bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' /etc/apache2/httpd.conf
-if qt diff /etc/apache2/httpd.conf /etc/apache2/httpd.conf.bak; then
+sudo sed -i .bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
+if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
   echo "No change made to: apache2/httpd.conf"
 else
   etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf"
 fi
-sudo rm /etc/apache2/httpd.conf.bak
+sudo rm "${HTTPD_CONF}.bak"
 
 # https://clickontyler.com/support/a/38/how-start-apache-automatically/
 
@@ -778,10 +780,10 @@ if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
 fi
 
 # Account for both newly and previously provisioned scenarios
-sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                        /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;" /etc/apache2/httpd.conf
-sudo sed -i .bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                     /etc/apache2/httpd.conf
-sudo rm /etc/apache2/httpd.conf.bak
+sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                        "$HTTPD_CONF"
+sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;" "$HTTPD_CONF"
+sudo sed -i .bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                     "$HTTPD_CONF"
+sudo rm "${HTTPD_CONF}.bak"
 
 qt pushd /etc/
 if git status | qt grep -E 'apache2/httpd.conf'; then
