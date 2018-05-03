@@ -346,7 +346,7 @@ else
       show_status "Found old homebrew/php tap. Deleting"
       brew untap homebrew/php
     fi
-    find "$BREW_PREFIX/etc/php" -name ext-mcrypt.ini -delete
+    [[ -d "$BREW_PREFIX/etc/php" ]] && find "$BREW_PREFIX/etc/php" -name ext-mcrypt.ini -delete
   fi
 fi
 
@@ -451,25 +451,23 @@ if ! qt launchctl list homebrew.mxcl.mariadb; then
   show_status 'Setting mysql root password... waiting for mysqld to start'
   # Just sleep, waiting for mariadb to start
   sleep 7
-  mysql -u root mysql <<< "UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES;"
+  mysql -u root mysql <<< "SET SQL_SAFE_UPDATES = 0; UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES; SET SQL_SAFE_UPDATES = 1;"
 fi
 # -- SETUP APACHE -------------------------------------------------------------
 echo "== Processing Apache =="
 
-# apache httpd.conf?
-# diff -r apache2/httpd.conf /Users/jeebak/SlipStream/host/apache2/httpd.conf
 show_status 'Updating httpd.conf settings'
 for i in \
-  'LoadModule socache_shmcb_module libexec/apache2/mod_socache_shmcb.so' \
-  'LoadModule ssl_module libexec/apache2/mod_ssl.so' \
-  'LoadModule cgi_module libexec/apache2/mod_cgi.so' \
-  'LoadModule vhost_alias_module libexec/apache2/mod_vhost_alias.so' \
-  'LoadModule actions_module libexec/apache2/mod_actions.so' \
-  'LoadModule rewrite_module libexec/apache2/mod_rewrite.so' \
-  'LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so' \
-  'LoadModule proxy_module libexec/apache2/mod_proxy.so' \
+  'LoadModule socache_shmcb_module ' \
+  'LoadModule ssl_module ' \
+  'LoadModule cgi_module ' \
+  'LoadModule vhost_alias_module ' \
+  'LoadModule actions_module ' \
+  'LoadModule rewrite_module ' \
+  'LoadModule proxy_fcgi_module ' \
+  'LoadModule proxy_module ' \
 ; do
-  sudo sed -i .bak "s;#$i;$i;" /etc/apache2/httpd.conf
+  sudo sed -i .bak "s;#.*${i}\\(.*\\);${i}\\1;" /etc/apache2/httpd.conf
 done
 
 DEST_DIR="/Users/$USER/Sites"
