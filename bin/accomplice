@@ -17,6 +17,16 @@ function die() {
   exit "$2"
 }
 
+# Quiet it all
+function qt() {
+  "$@" > /dev/null 2>&1
+}
+
+# Quiet only errors
+function qte() {
+  "$@" 2> /dev/null
+}
+
 accpl_self="${0##/*/}"
 destdir="$(grep -E -o '[^/]+/[^/]*$' <<< "${0%/bin/$accpl_self}")"
 confdir="${XDG_CONFIG_HOME:-$HOME/.config}/$destdir"
@@ -268,8 +278,8 @@ function accpl.__run_compass() {
 
   sassdir_relative="$(sed "s;$git_root/;;" <<< "$sassdir")"
 
-  if accpl.__git_ls_grep "$sassdir_relative/Gemfile"; then # 2> /dev/null; then
-    if ! "$BUNDLE" list | grep ' compass ' > /dev/null; then
+  if accpl.__git_ls_grep "$sassdir_relative/Gemfile"; then
+    if ! "$BUNDLE" list | qt grep ' compass '; then
       "$BUNDLE" install
     fi
     COMPASS="$BUNDLE exec compass"
@@ -302,7 +312,7 @@ function accpl.__is_linux() {
 }
 
 function accpl.__is_git_repo() {
-  [[ -d .git ]] || git rev-parse --git-dir > /dev/null 2>&1
+  [[ -d .git ]] || qt git rev-parse --git-dir
 }
 
 function accpl.__is_d8() {
@@ -314,7 +324,7 @@ function accpl.__is_d8() {
 
 function accpl.__is_concrete5() {
   if accpl.__is_git_repo; then
-    accpl.__git_ls_grep concrete/config/app.php > /dev/null 2>&1
+    qt accpl.__git_ls_grep concrete/config/app.php
   else
     return 1
   fi
@@ -322,7 +332,7 @@ function accpl.__is_concrete5() {
 
 function accpl.__is_drupal() {
   if accpl.__is_git_repo; then
-    accpl.__git_ls_grep modules/taxonomy/taxonomy.module > /dev/null 2>&1
+    qt accpl.__git_ls_grep modules/taxonomy/taxonomy.module
   else
     return 1
   fi
@@ -330,7 +340,7 @@ function accpl.__is_drupal() {
 
 function accpl.__is_joomla() {
   if accpl.__is_git_repo; then
-    accpl.__git_ls_grep libraries/joomla/ > /dev/null 2>&1
+    qt accpl.__git_ls_grep libraries/joomla/
   else
     return 1
   fi
@@ -338,7 +348,7 @@ function accpl.__is_joomla() {
 
 function accpl.__is_laravel() {
   if accpl.__is_git_repo; then
-    accpl.__git_ls_grep 'artisan$' > /dev/null 2>&1
+    qt accpl.__git_ls_grep 'artisan$'
   else
     return 1
   fi
@@ -346,7 +356,7 @@ function accpl.__is_laravel() {
 
 function accpl.__is_symfony() {
   if accpl.__is_git_repo; then
-    accpl.__git_ls_grep app/SymfonyRequirements.php > /dev/null 2>&1
+    qt accpl.__git_ls_grep app/SymfonyRequirements.php
   else
     return 1
   fi
@@ -354,7 +364,7 @@ function accpl.__is_symfony() {
 
 function accpl.__is_wordpress() {
   if accpl.__is_git_repo; then
-    accpl.__git_ls_grep wp-admin/index.php > /dev/null 2>&1
+    qt accpl.__git_ls_grep wp-admin/index.php
   else
     return 1
   fi
@@ -369,14 +379,14 @@ function accpl.__get_git_current_branch() {
 
   if accpl.__is_git_repo; then
     git_root="$(accpl.__get_git_root)"
-    git_head="$(git symbolic-ref HEAD 2> /dev/null)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat "$git_root/.git/HEAD")"
+    git_head="$(qte git symbolic-ref HEAD)" || git_head="$([[ -f $git_root/.git/HEAD ]] && cat "$git_root/.git/HEAD")"
   fi
 
   echo "${git_head##refs/heads/}"
 }
 
 function accpl.__get_git_root() {
-  git rev-parse --show-toplevel 2> /dev/null
+  qte git rev-parse --show-toplevel
 }
 
 function accpl.__get_concrete5_creds() {
@@ -582,16 +592,16 @@ function accpl.ra() {
   local httpd_path apachectl_path
 
   # Preferentially use system apache since slipstream uses it (not trusting user $PATH)
-  httpd_path="$(    command ls /usr/sbin/httpd      2> /dev/null || command ls "$brew_prefix/opt/httpd/bin/httpd" 2> /dev/null)"
-  apachectl_path="$(command ls /usr/sbin/apachectl  2> /dev/null || command ls "$brew_prefix/bin/apachectl"       2> /dev/null)"
+  httpd_path="$(    qte command ls /usr/sbin/httpd     || qte command ls "$brew_prefix/opt/httpd/bin/httpd")"
+  apachectl_path="$(qte command ls /usr/sbin/apachectl || qte command ls "$brew_prefix/bin/apachectl"      )"
 
   if [[ -z "$httpd_path" ]] || [[ -z "$apachectl_path" ]]; then
     die "Y U NO have httpd or apachectl?!" 127
   fi
 
   errcho "Restarting Apache..."
-  pgrep -f "/usr/sbin/httpd"  2> /dev/null > /dev/null && accpl.__verbose_run sudo pkill -9 -f "/usr/sbin/httpd"
-  pgrep -f "$httpd_path"      2> /dev/null > /dev/null && accpl.__verbose_run sudo pkill -9 -f "$httpd_path"
+  qt pgrep -f "/usr/sbin/httpd" && accpl.__verbose_run sudo pkill -9 -f "/usr/sbin/httpd"
+  qt pgrep -f "$httpd_path"     && accpl.__verbose_run sudo pkill -9 -f "$httpd_path"
 
   accpl.__verbose_run sudo "$apachectl_path" -k start
 
@@ -605,7 +615,7 @@ function accpl.rp() {
   local service stopped version
 
   if accpl.__is_linux; then
-    killall php-fpm 2> /dev/null
+    qte killall php-fpm
     ("$brew_prefix/sbin/php-fpm" &)
     return
   fi
@@ -628,7 +638,7 @@ function accpl.sphp() {
   local currentversion newversion shortOld shortNew
   local currentBrewVersion currentBrewPhpVersion validVersions GSORT
 
-  GSORT="$(command -v gsort || { sort --version | grep -o 'GNU coreutils' > /dev/null && command -v sort; })"
+  GSORT="$(command -v gsort || { sort --version | qt grep -o 'GNU coreutils' && command -v sort; })"
   if [[ -z "$GSORT" ]]; then
     die "Y U NO have GNU sort?!" 1
   fi
@@ -666,17 +676,17 @@ function accpl.sphp() {
   shortOld="$(php -r "echo substr(phpversion(), 0, 1);")"
   shortNew="$(php -r "echo substr('$1', 0, 1);")"
 
-  if accpl.__verbose_run brew list "php@${newversion}" 2> /dev/null > /dev/null; then
+  if qt accpl.__verbose_run brew list "php@${newversion}"; then
     errcho "PHP version $newversion found"
 
     errcho "Unlinking old binaries for ${currentversion} ..."
     accpl.__verbose_run brew unlink "php@${currentversion}"
 
     errcho "Linking new binaries for ${newversion} ..."
-    accpl.__verbose_run brew unlink "php@${newversion}" 2> /dev/null > /dev/null
+    qt accpl.__verbose_run brew unlink "php@${newversion}"
     accpl.__verbose_run brew link --overwrite --force "php@${newversion}"
 
-    if accpl.__is_linux || accpl.__verbose_run brew services list | grep -E '^php[@]*[57]*' 2> /dev/null > /dev/null; then
+    if accpl.__is_linux || accpl.__verbose_run brew services list | qt grep -E '^php[@]*[57]*'; then
       if [[ "$newversion" = "$currentBrewPhpVersion" ]]; then
         accpl.rp "php"
       else
@@ -868,7 +878,7 @@ function accpl.seed() {
     $CAT "$1" | accpl.__call_wp_cli db import -
   else
     read -r dbname dbpassword dbusername <<< "$(accpl.__get_mysql_creds)"
-    if mysqlshow -u"$dbusername" -p"$dbpassword" "$dbname" > /dev/null 2>&1; then
+    if qt mysqlshow -u"$dbusername" -p"$dbpassword" "$dbname"; then
       accpl.drop
       accpl.c
     fi
@@ -902,7 +912,7 @@ function accpl.addme() {
         accpl.__call_drush user-add-role "$role" "$uid"
       done <<< "$roles"
 
-      if accpl.__call_drush pm-list --pipe --type=module --status=enabled --no-core | grep -E '\bemail_registration\b' > /dev/null 2>&1; then
+      if accpl.__call_drush pm-list --pipe --type=module --status=enabled --no-core | qt grep -E '\bemail_registration\b'; then
         errcho "*************************************************************************************** "
         errcho "***** The 'email_registration' module is enabled. Use your email address to login ***** "
         errcho "*************************************************************************************** "
@@ -948,7 +958,7 @@ function accpl.dls() {
 
   if [[ -d "$drupal_root/sites/default/" ]]; then
     if [[ ! -f "$drupal_root/sites/default/setting.php" ]]; then
-      if grep "${local_settings}.php" "$drupal_root/sites/default/settings.php" > /dev/null 2>&1; then
+      if qt grep "${local_settings}.php" "$drupal_root/sites/default/settings.php"; then
         sed -e "s/__MYSQL_DB__/$clean_mysql_db/g"      \
             -e "s/__MYSQL_USER__/$clean_mysql_db/g"    \
             -e "s/__MYSQL_PASSWD__/$clean_mysql_db/g"  \
@@ -1119,12 +1129,12 @@ function accpl.fp() {
 
   if accpl.__is_mac; then
     # http://apple.stackexchange.com/questions/13132/how-to-add-user-to-a-group-on-command-line
-    if ! dseditgroup -o checkmember -m "$USER" "$apache_group" > /dev/null; then
+    if ! qt dseditgroup -o checkmember -m "$USER" "$apache_group"; then
       accpl.__verbose_run sudo dseditgroup -o edit -a "$USER" -t user "$apache_group"
     fi
   elif accpl.__is_linux; then
     # NOTE: adding a group doesn't show until user logs out and back in.
-    if ! groups | grep -E "\\b$apache_group\\b" > /dev/null; then
+    if ! qt groups | grep -E "\\b$apache_group\\b"; then
       accpl.__verbose_run sudo usermod -a -G "$apache_group" "$USER"
     fi
   else
@@ -1141,9 +1151,9 @@ function accpl.fp() {
       # option on OSX and Linux, but chmod does not under Linux.
       [[ -d "$files_root/$i" ]] && i="$i/"
       # For "prod" use:   sudo chgrp -R $apache_group "$files_root/$i"
-      accpl.__verbose_run sudo chown -R "$USER:$apache_group" "$files_root/$i"
-      accpl.__verbose_run sudo chmod -R $chmod_options ug+rw "$files_root/$i" 2> /dev/null | grep -v "’ retained as "
-      accpl.__verbose_run sudo find "$files_root/$i" -type d -exec chmod $chmod_options g+s {} \; -a -exec chmod $chmod_options o-stw {} \; | grep -v "’ retained as "
+      accpl.__verbose_run     sudo chown -R "$USER:$apache_group" "$files_root/$i"
+      accpl.__verbose_run qte sudo chmod -R $chmod_options ug+rw "$files_root/$i" | grep -v "’ retained as "
+      accpl.__verbose_run     sudo find "$files_root/$i" -type d -exec chmod $chmod_options g+s {} \; -a -exec chmod $chmod_options o-stw {} \; | grep -v "’ retained as "
     fi
   done
 }
@@ -1173,7 +1183,7 @@ function accpl.ssh() {
   local branch cap_conf SSH user gateway
 
   branch="$(accpl.__get_git_current_branch)"
-  cap_conf="$(accpl.__git_ls_grep "/${branch}.rb" 2> /dev/null)"
+  cap_conf="$(qte accpl.__git_ls_grep "/${branch}.rb")"
   SSH="echo"
   if [[ -f "$cap_conf" ]]; then
     # config/deploy/prod.rb:15:ssh_options[:user] = 'deploy'
@@ -1279,7 +1289,7 @@ function accpl.ex() {
   local i option_tar option_gunzip option_unrar option_unzip option_uncompress
 
   # For more info, while in bash: help caller
-  if caller 0 | grep "\\.exam " > /dev/null; then
+  if caller 0 | qt grep "\\.exam "; then
     option_tar=t
     option_gunzip=-t
     option_unrar=l
@@ -1335,14 +1345,14 @@ function accpl.cd() {
     TMP="/tmp/drupal-$drupal_version-$$"
 
     mkdir -p "$TMP"
-    pushd "$TMP" > /dev/null || exit
+    qt pushd "$TMP" || exit
 
     for i in $(git --git-dir="$DRUPAL_CLONE/.git" archive "$drupal_version" | tar xvf - 2>&1 | sed 's/^x //' | grep -v '/$'); do
       diff -U 0 -N -w "$i" "$drupal_root/$i"
     done | tee "$git_root/core-diff.diff"
     errcho "$(tput setaf 3)Output saved to: $(tput setaf 5)'$git_root/core-diff.diff'$(tput sgr0)"
 
-    popd > /dev/null || exit
+    qt popd || exit
     rm -rf "$TMP"
   else
     die "This doesn't look like drupal" 1
@@ -1371,7 +1381,7 @@ function accpl.cus() {
 #   declare -f, for function definitions
 if [[ "${BASH_SOURCE[0]}" = "${0}" ]]; then
   # Allow for function names to be sym- or hard-linked to this script
-  { type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self"; } || {
+  { qt type -t "accpl.${accpl_self}" && subcommand="$accpl_self"; } || {
     subcommand="$1"
     shift
   }
