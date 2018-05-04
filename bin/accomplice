@@ -5,9 +5,16 @@
 
 brew_prefix="$(brew --prefix)"
 
+# Echo to strerr
 function errcho() {
   # echo to strerr
   >&2 echo "$@"
+}
+
+# Die with message to stderr and exit code
+function die() {
+  errcho "$1"
+  exit "$2"
 }
 
 accpl_self="${0##/*/}"
@@ -88,7 +95,7 @@ function accpl.__call_apachectl() {
     APACHECTL="$(command -v apache2ctl)"
   fi
 
-  [[ -z "$APACHECTL" ]] && errcho "ApacheCtl not found!" && exit 127
+  [[ -z "$APACHECTL" ]] && die "ApacheCtl not found!" 127
 
   accpl.__verbose_run sudo "$APACHECTL" "$@"
 }
@@ -97,7 +104,7 @@ function accpl.__call_drush() {
   local DRUSH drupal_root
 
   DRUSH="$(command -v drush)"
-  [[ -z "$DRUSH" ]] && errcho "Drush not found!" && exit 127
+  [[ -z "$DRUSH" ]] && die "Drush not found!" 127
 
   drupal_root="$(accpl.__get_drupal_root)"
   "$DRUSH" -r "$drupal_root" "$@"
@@ -107,7 +114,7 @@ function accpl.__call_joomla() {
   local JOOMLA joomla_root
 
   JOOMLA="$(command -v joomla)"
-  [[ -z "$JOOMLA" ]] && errcho "Joomla-console not found!" && exit 127
+  [[ -z "$JOOMLA" ]] && die "Joomla-console not found!" 127
 
   joomla_root="$(accpl.__get_joomla_root)"
   "$JOOMLA" --www="$joomla_root" "$@"
@@ -117,7 +124,7 @@ function accpl.__call_wp_cli() {
   local WPCLI wordpress_root
 
   WPCLI="$(command -v wp)"
-  [[ -z "$WPCLI" ]] && errcho "Wp-cli not found!" && exit 127
+  [[ -z "$WPCLI" ]] && die "Wp-cli not found!" 127
 
   wordpress_root="$(accpl.__get_wordpress_root)"
   "$WPCLI" --path="$wordpress_root" "$@"
@@ -251,8 +258,8 @@ function accpl.__run_compass() {
   BUNDLE="$(command -v bundle)"
   COMPASS="$(command -v compass)"
 
-  [[ -z "$BUNDLE" ]] && errcho "Bundler not found!" && exit 127
-  [[ -z "$COMPASS" ]] && errcho "Compass not found!" && exit 127
+  [[ -z "$BUNDLE" ]]  && die "Bundler not found!" 127
+  [[ -z "$COMPASS" ]] && die "Compass not found!" 127
 
   git_root="$(accpl.__get_git_root)"
   sassdir="$(accpl.__get_sassdir)"
@@ -282,8 +289,7 @@ function accpl.run_query() {
   if accpl.__db_query "$@"; then
     errcho "SUCCESS: '$query'"
   else
-    errcho "FAIL: '$query'"
-    exit 1
+    die "FAIL: '$query'" 1
   fi
 }
 
@@ -565,7 +571,7 @@ function accpl.__get_sassdir() {
   # TODO: elif accpl.__is_joomla; then
   fi
 
-  [[ -z "$sassdir" ]] && errcho "No config.rb file found!" && exit 1
+  [[ -z "$sassdir" ]] && die "No config.rb file found!" 1
 
   echo "$git_root/${sassdir%/*}"
 }
@@ -580,8 +586,7 @@ function accpl.ra() {
   apachectl_path="$(command ls /usr/sbin/apachectl  2> /dev/null || command ls "$brew_prefix/bin/apachectl"       2> /dev/null)"
 
   if [[ -z "$httpd_path" ]] || [[ -z "$apachectl_path" ]]; then
-    errcho "Y U NO have httpd or apachectl?!"
-    exit 127
+    die "Y U NO have httpd or apachectl?!" 127
   fi
 
   errcho "Restarting Apache..."
@@ -625,8 +630,7 @@ function accpl.sphp() {
 
   GSORT="$(command -v gsort || { sort --version | grep -o 'GNU coreutils' > /dev/null && command -v sort; })"
   if [[ -z "$GSORT" ]]; then
-    errcho "Y U NO have GNU sort?!"
-    exit 1
+    die "Y U NO have GNU sort?!" 1
   fi
 
   # https://brew.sh/2018/01/19/homebrew-1.5.0/
@@ -635,16 +639,14 @@ function accpl.sphp() {
   # If slipstream.bash was used to setup, coreutils (which contains gsort) will be available
   if [[ "$(echo -e "$currentBrewVersion\\n 1.4" | "$GSORT" -V -r | head -1)" = ' 1.4' ]]; then
     errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
-    errcho "This script will no longer support the older version"
-    exit 1
+    die "This script will no longer support the older version" 1
   fi
 
   currentBrewPhpVersion="$([[ -d "$brew_prefix/Cellar/php" ]] && basename "$(realpath "$brew_prefix/opt/php")" | grep -E -o '[0-9]+\.[0-9]+')"
   validVersions="$(find "$brew_prefix/opt/"php@* -type l -exec basename {} \; | grep -E -o '[0-9]+\.[0-9]+' | tr '\n' '|')"
 
   if [ $# -ne 1 ]; then
-    errcho "Usage: $accpl_self sphp [${validVersions}sys]"
-    exit 1
+    die "Usage: $accpl_self sphp [${validVersions}sys]" 1
   fi
 
   if [[ "$1" = 'sys' ]];then
@@ -694,8 +696,7 @@ function accpl.sphp() {
 
     errcho "Done."
   else
-    errcho "PHP version $newversion was not found."
-    exit 1
+    die "PHP version $newversion was not found." 1
   fi
 }
 
@@ -709,8 +710,7 @@ function accpl.c() {
   if accpl.__db_query "CREATE DATABASE IF NOT EXISTS $dbname COLLATE 'utf8_general_ci'" mysql root; then
     accpl.__db_query "GRANT ALL PRIVILEGES ON $dbname.* TO '$dbusername'@'localhost' IDENTIFIED BY '$dbpassword'" mysql root
   else
-    errcho "Creation of: '$dbname' FAILED"
-    exit 1
+    die "Creation of: '$dbname' FAILED" 1
   fi
 
   errcho "Created: '$dbname' successfully"
@@ -724,8 +724,7 @@ function accpl.drop() {
   if accpl.__db_query "DROP DATABASE $dbname" mysql root; then
     accpl.__db_query "DROP USER '$dbusername'@'localhost'" mysql root
   else
-    errcho "Destruction of: '$dbname' FAILED"
-    exit 1
+    die "Destruction of: '$dbname' FAILED" 1
   fi
 
   errcho "Destroyed: '$dbname' successfully"
@@ -746,8 +745,7 @@ function accpl.p() {
       errcho "Password change for: '$dbusername' successful"
     fi
   else
-    errcho "User: '$dbusername' does not seem to exist"
-    exit 1
+    die "User: '$dbusername' does not seem to exist" 1
   fi
 }
 
@@ -765,7 +763,7 @@ function accpl.t() {
 }
 
 function accpl.trunc() {
-  [[ -z "$1" ]] && errcho "Give me a table to truncate!" && exit 1
+  [[ -z "$1" ]] && die "Give me a table to truncate!" 1
   accpl.run_query "TRUNCATE TABLE $1"
 }
 
@@ -782,8 +780,8 @@ function accpl.f() {
 function accpl.si() {
   local clean_mysql_db drush_output drupal_root
 
-  # [[ -d .git ]] && errcho "This is already a git repo!" && exit 1
-  [[ -d drupal ]] || [[ -f drupal ]] && errcho "Drupal folder or file already exists!" && exit 1
+  # [[ -d .git ]] && die "This is already a git repo!" 1
+  [[ -d drupal ]] || [[ -f drupal ]] && die "Drupal folder or file already exists!" 1
 
   clean_mysql_db="$(accpl.__get_clean_mysql_db)"
   accpl.c
@@ -849,7 +847,7 @@ function accpl.dump() {
 function accpl.seed() {
   local CAT dbname dbpassword dbusername
 
-  [[ -z "$1" ]] || [[ ! -f "$1" ]] && errcho "$1 NOT valid!" && exit 1
+  [[ -z "$1" ]] || [[ ! -f "$1" ]] && die "$1 NOT valid!" 1
 
   case "$1" in
     *.7z)   CAT="7z e -so";;
@@ -988,8 +986,7 @@ function accpl.aa() {
   elif [[ -d "/var/log/httpd" ]]; then
     log_dir="/var/log/httpd"
   else
-    errcho "I don't know where your Apache logs are!"
-    exit 127
+    die "I don't know where your Apache logs are!" 127
   fi
 
   if [[ -r "$log_dir/access_log" ]]; then
@@ -997,8 +994,7 @@ function accpl.aa() {
   elif [[ -r "$log_dir/access.log" ]]; then
     log_file="$log_dir/access.log"
   else
-    errcho "I don't know what your Apache access logs are named!"
-    exit 127
+    die "I don't know what your Apache access logs are named!" 127
   fi
 
   "$log_viewer" $options "$log_file"
@@ -1019,8 +1015,7 @@ function accpl.ae() {
   elif [[ -d "/var/log/httpd" ]]; then
     log_dir="/var/log/httpd"
   else
-    errcho "I don't know where your Apache logs are!"
-    exit 127
+    die "I don't know where your Apache logs are!" 127
   fi
 
   if [[ -r "$log_dir/error_log" ]]; then
@@ -1028,8 +1023,7 @@ function accpl.ae() {
   elif [[ -r "$log_dir/error.log" ]]; then
     log_file="$log_dir/error.log"
   else
-    errcho "I don't know what your Apache error logs are named!"
-    exit 127
+    die "I don't know what your Apache error logs are named!" 127
   fi
 
   "$log_viewer" $options "$log_file"
@@ -1134,8 +1128,7 @@ function accpl.fp() {
       accpl.__verbose_run sudo usermod -a -G "$apache_group" "$USER"
     fi
   else
-    errcho "Unrecognized \$OSTYPE: $OSTYPE"
-    exit 1
+    die "Unrecognized \$OSTYPE: $OSTYPE" 1
   fi
 
   [[ ! -d "$files_root" ]] && mkdir -p "$files_root"
@@ -1190,8 +1183,7 @@ function accpl.ssh() {
     [[ ! -z "$user" ]] && [[ ! -z "$gateway" ]] && SSH=ssh
     $SSH "$user@$gateway"
   else
-    echo "There doesn't seem capistrano config file for the $branch branch!"
-    exit 1
+    die "There doesn't seem capistrano config file for the $branch branch!" 1
   fi
 }
 
@@ -1246,13 +1238,11 @@ function accpl.exfe() {
       elif [[ -d "$drupal_root/sites/all/modules" ]]; then
         features_root="$drupal_root/sites/all/modules"
       else
-        errcho "The $drupal_root/sites/all/modules folder doesn't seem to exist"
-        exit 1
+        die "The $drupal_root/sites/all/modules folder doesn't seem to exist" 1
       fi
     fi
   else
-    errcho "This doesn't seem to be a drupal project"
-    exit 1
+    die "This doesn't seem to be a drupal project" 1
   fi
 
   local _pwd=$PWD
@@ -1337,7 +1327,7 @@ function accpl.cd() {
     local DRUPAL_CLONE drupal_version drupal_root git_root TMP
 
     DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
-    [[ ! -d "$DRUPAL_CLONE/.git" ]] && errcho "No drupal clone" && exit 1
+    [[ ! -d "$DRUPAL_CLONE/.git" ]] && die "No drupal clone" 1
 
     drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
     drupal_root="$(accpl.__get_drupal_root)"
@@ -1355,7 +1345,7 @@ function accpl.cd() {
     popd > /dev/null || exit
     rm -rf "$TMP"
   else
-    errcho "This doesn't look like drupal" && exit 1
+    die "This doesn't look like drupal" 1
   fi
 }
 
@@ -1364,7 +1354,7 @@ function accpl.cus() {
     local DRUPAL_CLONE drupal_version
 
     DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
-    [[ ! -d "$DRUPAL_CLONE/.git" ]] && errcho "No drupal clone" && exit 1
+    [[ ! -d "$DRUPAL_CLONE/.git" ]] && die "No drupal clone" 1
 
     drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
     # TODO: programmaticlly determine prefix (vs. hard-coded 'drupal', and for
@@ -1372,7 +1362,7 @@ function accpl.cus() {
     comm -13  <(git --git-dir="$DRUPAL_CLONE/.git" ls-tree --name-only -r "$drupal_version" | sed 's;^;drupal/;' | sort) \
               <(git ls-tree --name-only -r HEAD | grep -v -e sites/all/modules/contrib/ -e sites/all/libraries/ | sort)
   else
-    errcho "This doesn't look like drupal" && exit 1
+    die "This doesn't look like drupal" 1
   fi
 }
 
