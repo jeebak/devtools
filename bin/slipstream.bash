@@ -147,11 +147,11 @@ function process() {
             else
               pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
               show_status "PECL: Installing: $pecl_pkg"
-              env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
+              qt env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
                   CFLAGS='-fgnu89-inline' \
                   LDFLAGS='-fgnu89-inline' \
                   CXXFLAGS='-fgnu89-inline' \
-                qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
+                "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
             fi
           fi
         done 4< <(get_pkgs "pecl")
