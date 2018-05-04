@@ -143,7 +143,7 @@ function process() {
               # TODO: refine this for multiple versions
               pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
               show_status "PECL: Installing: $pecl_pkg"
-              "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
+              qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
             else
               pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
               show_status "PECL: Installing: $pecl_pkg"
@@ -151,7 +151,7 @@ function process() {
                   CFLAGS='-fgnu89-inline' \
                   LDFLAGS='-fgnu89-inline' \
                   CXXFLAGS='-fgnu89-inline' \
-                "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' > /dev/null
+                qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
             fi
           fi
         done 4< <(get_pkgs "pecl")
@@ -333,7 +333,7 @@ else
     errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
     die "This script will no longer support the older version" 127
   else
-    if brew list | grep -E -e '^php[57]' > /dev/null; then
+    if brew list | qt grep -E -e '^php[57]'; then
       show_status "Found old packages from the homebrew/php tap. Deleting"
       brew list | grep -E -e '^php[57]' | xargs brew rm --force --ignore-dependencies
       # TODO: during a test run, 'brew rm php56' failed, due to
@@ -342,7 +342,7 @@ else
       # laptop.
     fi
 
-    if brew tap  | grep -E homebrew/php  > /dev/null; then
+    if brew tap  | qt grep -E homebrew/php; then
       show_status "Found old homebrew/php tap. Deleting"
       brew untap homebrew/php
     fi
