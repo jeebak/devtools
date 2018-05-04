@@ -4,9 +4,16 @@
 
 brew_prefix="$(brew --prefix)"
 
+# Echo to strerr
 function errcho() {
   # echo to strerr
   >&2 echo "$@"
+}
+
+# Die with message to stderr and exit code
+function die() {
+  errcho "$1"
+  exit "$2"
 }
 
 accpl_self="${0##/*/}"
@@ -140,8 +147,7 @@ function accpl.__reload_plist() {
 }
 
 function accpl.ra() {
-  errcho "Restart Apache (ra) moved to accomplice"
-  exit 127
+  die "Restart Apache (ra) moved to accomplice" 127
 }
 
 function accpl.rd() {
@@ -160,8 +166,7 @@ function accpl.rm() {
 }
 
 function accpl.rp() {
-  errcho "Restart PHP-FPM (rp) moved to accomplice"
-  exit 127
+  die "Restart PHP-FPM (rp) moved to accomplice" 127
 }
 
 # http://www.thxbye.de/mac/mac-restarting-the-mac-os-x-dock-finder-spaces-or-menubar.html
@@ -223,15 +228,15 @@ function accpl.gifify() {
   #   https://gist.github.com/SlexAxton/4989674#comment-1199058
   local FFMPEG CONVERT GIFSICLE output_file maxsize tmp_prefix="/tmp/gifify-tmp-$$"
 
-  [[ -z "$1" ]]   && errcho "$(tput setaf 1)No input file given. Example: gifify example.mov [max width (pixels)]$(tput sgr 0)" && exit 1
-  [[ ! -f "$1" ]] && errcho "$(tput setaf 1)Input file: $1 does NOT exist!$(tput sgr 0)" && exit 1
+  [[ -z "$1" ]]   && die "$(tput setaf 1)No input file given. Example: gifify example.mov [max width (pixels)]$(tput sgr 0)" 1
+  [[ ! -f "$1" ]] && die "$(tput setaf 1)Input file: $1 does NOT exist!$(tput sgr 0)" 1
 
-  FFMPEG="$(command   -v ffmpeg || command -v avconf)"  || { errcho "ffmpeg not found!"  ; exit 1; }
-  CONVERT="$(command  -v convert)"                      || { errcho "convert not found!" ; exit 1; }
-  GIFSICLE="$(command -v gifsicle)"                     || { errcho "gifsicle not found!"; exit 1; }
+  FFMPEG="$(  command -v ffmpeg || command -v avconf)"  || { die "ffmpeg not found!"    1; }
+  CONVERT="$( command -v convert)"                      || { die "convert not found!"   1; }
+  GIFSICLE="$(command -v gifsicle)"                     || { die "gifsicle not found!"  1; }
 
   output_file="${1%.*}.gif"
-  [[ -f "$output_file" ]] && errcho "$output_file already exists!" && exit 1
+  [[ -f "$output_file" ]] && die "$output_file already exists!" 1
   [[ ! -z "$2" ]] && maxsize="-vf scale=$2:-1" || maxsize=""
 
   errcho "$(tput setaf 2)Creating \"$output_file\"...$(tput sgr 0)"
@@ -346,8 +351,7 @@ function accpl.buses() {
 }
 
 function accpl.sphp() {
-  errcho "Switch php (sphp) moved to accomplice"
-  exit 127
+  die "Switch php (sphp) moved to accomplice" 127
 }
 
 function accpl.penmod() {
