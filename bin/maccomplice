@@ -16,6 +16,16 @@ function die() {
   exit "$2"
 }
 
+# Quiet it all
+function qt() {
+  "$@" > /dev/null 2>&1
+}
+
+# Quiet only errors
+function qte() {
+  "$@" 2> /dev/null
+}
+
 accpl_self="${0##/*/}"
 
 # shellcheck source=/dev/null
@@ -424,7 +434,7 @@ function accpl.vv() {
 #   declare -f, for function definitions
 if [[ "${BASH_SOURCE[0]}" = "${0}" ]]; then
   # Allow for function names to be sym- or hard-linked to this script
-  { type -t "accpl.${accpl_self}" > /dev/null && subcommand="$accpl_self"; } || {
+  { qt type -t "accpl.${accpl_self}" && subcommand="$accpl_self"; } || {
     subcommand="$1"
     shift
   }
