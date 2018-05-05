@@ -39,6 +39,7 @@ Usage: $accpl_self <subcommand> [options]
     ra        Restart Apache
     rm        Restart MariaDB/MySQL
     rp        Restart PHP-FPM
+    rs        Restart Slipstream "services" (all of the above)
     sphp      Switch php versions: $accpl_self sphp [phpversion, like: 5.6, 7.1]
 
   MySQL Helper Subcommands:
@@ -633,8 +634,10 @@ function accpl.rm() {
   local db
 
   if accpl.__is_linux; then
-    errcho "Restarting mysql..."
+    errcho "Stopping mysql..."
     mysql.server stop
+
+    errcho "Starting mysql..."
     (qt mysql.server start &)
     return
   fi
@@ -666,6 +669,13 @@ function accpl.rp() {
 
   accpl.__verbose_run brew services start "${version}"
   accpl.__verbose_run brew services list
+}
+
+function accpl.rs() {
+  # Restart Apache / PHP-FPM
+  accpl.ra
+  # Restart MariaDB/MySQL
+  accpl.rm
 }
 
 function accpl.sphp() {
