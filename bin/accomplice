@@ -37,6 +37,7 @@ Usage: $accpl_self <subcommand> [options]
 
   System Helper Subcommands:
     ra        Restart Apache
+    rm        Restart MariaDB/MySQL
     rp        Restart PHP-FPM
     sphp      Switch php versions: $accpl_self sphp [phpversion, like: 5.6, 7.1]
 
@@ -611,10 +612,28 @@ function accpl.ra() {
   accpl.rp
 }
 
+function accpl.rm() {
+  local db
+
+  if accpl.__is_linux; then
+    errcho "Restarting mysql..."
+    mysql.server stop
+    (qt mysql.server start &)
+    return
+  fi
+
+  for db in mariadb mysql; do
+    if [[ -f "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist" ]]; then
+      accpl.__reload_plist "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist"
+    fi
+  done
+}
+
 function accpl.rp() {
   local service stopped version
 
   if accpl.__is_linux; then
+    errcho "Restarting php-fpm..."
     qte killall php-fpm
     ("$brew_prefix/sbin/php-fpm" &)
     return
