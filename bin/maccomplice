@@ -37,7 +37,6 @@ Usage: $accpl_self <subcommand> [options]
 
   System Helper Subcommands:
     rd        Restart DnsMasq/mDNSResponder
-    rm        Restart MariaDB/MySQL
 
     rdk       Restart Dock
     rf        Restart Finder
@@ -166,13 +165,7 @@ function accpl.rd() {
 }
 
 function accpl.rm() {
-  local db
-
-  for db in mariadb mysql; do
-    if [[ -f "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist" ]]; then
-      accpl.__reload_plist "$HOME/Library/LaunchAgents/homebrew.mxcl.${db}.plist"
-    fi
-  done
+  die "Restart MariaDB/MySQL moved to accomplice" 127
 }
 
 function accpl.rp() {
