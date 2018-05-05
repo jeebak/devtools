@@ -263,6 +263,23 @@ function accpl.__db_query() {
   fi
 }
 
+function accpl.__reload_plist() {
+  local plist="$1"
+  local _sudo=''
+
+  if [[ "$plist" =~ ^/Library/ ]] || [[ "$plist" =~ ^/System/Library/ ]]; then
+    _sudo='sudo'
+  fi
+
+  if [[ -f "$plist" ]]; then
+    # man launchctl: -w Overrides the Disabled key and sets it to false or true
+    accpl.__verbose_run $_sudo launchctl unload -w "$plist"
+    accpl.__verbose_run $_sudo launchctl load   -w "$plist"
+  else
+    errcho "$plist NOT FOUND!"
+  fi
+}
+
 function accpl.__run_compass() {
   local BUNDLE COMPASS git_root sassdir sassdir_relative
 
