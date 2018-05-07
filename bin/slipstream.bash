@@ -764,6 +764,8 @@ EOT
       s|^listen[[:space:]]*=[[:space:]]*.*|listen = $PHP_FPM_LISTEN|
       s|[;]*listen.mode[[:space:]]*=[[:space:]]*.*|listen.mode = 0666|
       s|[;]*pm.max_children[[:space:]]*=[[:space:]]*.*|pm.max_children = 10|
+      /^user[[:space:]]*=[[:space:]]*.*/ s|^|;|
+      /^group[[:space:]]*=[[:space:]]*.*/ s|^|;|
     " "$php_fpm_conf"
     mv "${php_fpm_conf}.bak" "${php_fpm_conf}-${NOW}"
     show_status "Original saved to: ${php_fpm_conf}-${NOW}"
