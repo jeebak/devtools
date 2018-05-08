@@ -298,7 +298,7 @@ fi
 # -- PASSWORDLESS SUDO --------------------------------------------------------
 if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
   show_status "Making sudo password-less for 'admin' group"
-  sudo sed -i .bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
+  sudo sed -i.bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
 
   if qt diff /etc/sudoers /etc/sudoers.bak; then
     echo "No change made to: /etc/sudoers"
@@ -469,12 +469,12 @@ for i in \
   'LoadModule proxy_fcgi_module ' \
   'LoadModule proxy_module ' \
 ; do
-  sudo sed -i .bak "s;#.*${i}\\(.*\\);${i}\\1;" "$HTTPD_CONF"
+  sudo sed -i.bak "s;#.*${i}\\(.*\\);${i}\\1;"  "$HTTPD_CONF"
 done
 
-sudo sed -i .bak "s;^Listen 80.*$;Listen 80;"     "$HTTPD_CONF"
-sudo sed -i .bak "s;^User .*$;User $USER;"        "$HTTPD_CONF"
-sudo sed -i .bak "s;^Group .*$;Group $(id -gn);"  "$HTTPD_CONF"
+sudo sed -i.bak "s;^Listen 80.*$;Listen 80;"    "$HTTPD_CONF"
+sudo sed -i.bak "s;^User .*$;User $USER;"       "$HTTPD_CONF"
+sudo sed -i.bak "s;^Group .*$;Group $(id -gn);" "$HTTPD_CONF"
 
 DEST_DIR="/Users/$USER/Sites"
 
@@ -511,9 +511,9 @@ if [[ -f /etc/apache2/extra/dev.conf ]]; then
   etc_git_commit "git rm apache2/extra/dev.conf" "Remove apache2/extra/dev.conf"
 fi
 
-if qt grep '^# Local vhost and ssl, for \*.dev$'                          "$HTTPD_CONF"; then
-  sudo sed -i .bak '/^# Local vhost and ssl, for \*.dev$/d'               "$HTTPD_CONF"
-  sudo sed -i .bak '/Include \/private\/etc\/apache2\/extra\/dev.conf/d'  "$HTTPD_CONF"
+if qt grep '^# Local vhost and ssl, for \*.dev$'                        "$HTTPD_CONF"; then
+  sudo sed -i.bak '/^# Local vhost and ssl, for \*.dev$/d'              "$HTTPD_CONF"
+  sudo sed -i.bak '/Include \/private\/etc\/apache2\/extra\/dev.conf/d' "$HTTPD_CONF"
   sudo rm "${HTTPD_CONF}.bak"
 
   etc_git_commit "git add $HTTPD_CONF" "Remove references to .dev from $HTTPD_CONF"
@@ -616,7 +616,7 @@ EOT
   etc_git_commit "git add apache2/extra/localhost.conf" "Add apache2/extra/localhost.conf"
 else
   if qt grep ' ProxySet connectiontimeout=5 timeout=240$' /etc/apache2/extra/localhost.conf; then
-    sudo sed -i .bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' /etc/apache2/extra/localhost.conf
+    sudo sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' /etc/apache2/extra/localhost.conf
     sudo rm /etc/apache2/extra/localhost.conf.bak
 
     etc_git_commit "git add apache2/extra/localhost.conf" "Update apache2/extra/localhost.conf ProxySet timeout value to 1800"
@@ -632,7 +632,7 @@ EOT
 fi
 
 # Have ServerName match CN in SSL Cert
-sudo sed -i .bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
+sudo sed -i.bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
 if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
   echo "No change made to: apache2/httpd.conf"
 else
@@ -711,7 +711,7 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
 
   # Process php.ini for $version
   show_status "Updating some $i settings"
-  sed -i .bak '
+  sed -i.bak '
     s|max_execution_time = 30|max_execution_time = 0|
     s|max_input_time = 60|max_input_time = 1800|
     s|; *max_input_vars = 1000|max_input_vars = 10000|
@@ -760,7 +760,7 @@ EOT
 
   if [[ ! -z "$php_fpm_conf" ]] && ! qt grep -E "^listen[[:space:]]*=[[:space:]]*$PHP_FPM_LISTEN" "$php_fpm_conf"; then
     show_status "Updating $php_fpm_conf"
-    sed -i .bak "
+    sed -i.bak "
       s|^listen[[:space:]]*=[[:space:]]*.*|listen = $PHP_FPM_LISTEN|
       s|[;]*listen.mode[[:space:]]*=[[:space:]]*.*|listen.mode = 0666|
       s|[;]*pm.max_children[[:space:]]*=[[:space:]]*.*|pm.max_children = 10|
@@ -783,9 +783,9 @@ if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
 fi
 
 # Account for both newly and previously provisioned scenarios
-sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                        "$HTTPD_CONF"
-sudo sed -i .bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;" "$HTTPD_CONF"
-sudo sed -i .bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                     "$HTTPD_CONF"
+sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                         "$HTTPD_CONF"
+sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;"  "$HTTPD_CONF"
+sudo sed -i.bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                      "$HTTPD_CONF"
 sudo rm "${HTTPD_CONF}.bak"
 
 qt pushd /etc/
@@ -812,7 +812,7 @@ fi
 # keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
 #   http://apple.stackexchange.com/questions/211015/el-capitan-apache-error-message-ah00526
 # This simple commenting out of the line seems to work just fine.
-sudo sed -i .bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
+sudo sed -i.bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
 sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
 
 qt pushd /etc/
