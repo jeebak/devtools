@@ -69,6 +69,11 @@ function get_pkgs() {
  sed -n "/Start: $1/,/End: $1/p" "$0"
 }
 
+# ... or eval it if there's code
+function get_conf() {
+  eval "$(get_pkgs "$1")"
+}
+
 MYPID="$$"
 
 # Clean-up!
@@ -410,32 +415,7 @@ fi
 [[ ! -d /etc/homebrew/etc/my.cnf.d ]] && sudo mkdir -p /etc/homebrew/etc/my.cnf.d
 if [[ ! -f /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf ]]; then
   show_status 'Creating: /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf'
-  cat <<EOT | qt sudo tee /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
-[mysqld]
-innodb_file_per_table = 1
-socket = /tmp/mysql.sock
-
-query_cache_type = 1
-query_cache_size = 128M
-query_cache_limit = 2M
-max_allowed_packet = 64M
-
-default_storage_engine = InnoDB
-innodb_flush_method=O_DIRECT
-innodb_buffer_pool_size = 512M
-innodb_log_buffer_size = 16M
-innodb_flush_log_at_trx_commit = 0
-# Deprecated: innodb_locks_unsafe_for_binlog = 1
-innodb_log_file_size = 256M
-
-tmp_table_size = 32M
-max_heap_table_size = 32M
-thread_cache_size = 4
-query_cache_limit = 2M
-join_buffer_size = 8M
-bind-address = 127.0.0.1
-key_buffer_size = 256M
-EOT
+  get_conf "mysqld_innodb.cnf" | qt sudo tee /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
 
   show_status "Linking to: $BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
   ln -svf /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
@@ -520,90 +500,7 @@ if qt grep '^# Local vhost and ssl, for \*.dev$'                        "$HTTPD_
 fi
 
 if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/localhost.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/localhost.conf || ! qt grep \\.xip\\.io /etc/apache2/extra/localhost.conf; then
-  cat <<EOT | qt sudo tee /etc/apache2/extra/localhost.conf
-<VirtualHost *:80>
-  ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io
-  VirtualDocumentRoot $DEST_DIR/%1/webroot
-
-  UseCanonicalName Off
-
-  LogFormat "%V %h %l %u %t \"%r\" %s %b" vcommon
-  CustomLog "/var/log/apache2/access_log" vcommon
-  ErrorLog "/var/log/apache2/error_log"
-
-  # With the switch to php-fpm, the apache2/other/php5.conf is not "Include"-ed, so need to...
-  AddType application/x-httpd-php .php
-  AddType application/x-httpd-php-source .phps
-
-  <IfModule dir_module>
-    DirectoryIndex index.html index.php
-  </IfModule>
-
-  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
-  #   http://serverfault.com/a/672969
-  #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
-  # This is to forward all PHP to php-fpm.
-  <FilesMatch \\.php$>
-    SetHandler "${PHP_FPM_HANDLER}"
-  </FilesMatch>
-
-  <Proxy ${PHP_FPM_PROXY}>
-    ProxySet connectiontimeout=5 timeout=1800
-  </Proxy>
-
-  <Directory "$DEST_DIR">
-    AllowOverride All
-    Options +Indexes +FollowSymLinks +ExecCGI
-    Require all granted
-    RewriteBase /
-  </Directory>
-</VirtualHost>
-
-Listen 443
-<VirtualHost *:443>
-  ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
-  VirtualDocumentRoot $DEST_DIR/%1/webroot
-
-  SSLEngine On
-  SSLCertificateFile    /private/etc/apache2/ssl/server.crt
-  SSLCertificateKeyFile /private/etc/apache2/ssl/server.key
-
-  UseCanonicalName Off
-
-  LogFormat "%V %h %l %u %t \"%r\" %s %b" vcommon
-  CustomLog "/var/log/apache2/access_log" vcommon
-  ErrorLog "/var/log/apache2/error_log"
-
-  # With the switch to php-fpm, the apache2/other/php5.conf is not "Include"-ed, so need to...
-  AddType application/x-httpd-php .php
-  AddType application/x-httpd-php-source .phps
-
-  <IfModule dir_module>
-    DirectoryIndex index.html index.php
-  </IfModule>
-
-  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
-  #   http://serverfault.com/a/672969
-  #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
-  # This is to forward all PHP to php-fpm.
-  <FilesMatch \\.php$>
-    SetHandler "${PHP_FPM_HANDLER}"
-  </FilesMatch>
-
-  <Proxy ${PHP_FPM_PROXY}>
-    ProxySet connectiontimeout=5 timeout=240
-  </Proxy>
-
-  <Directory "$DEST_DIR">
-    AllowOverride All
-    Options +Indexes +FollowSymLinks +ExecCGI
-    Require all granted
-    RewriteBase /
-  </Directory>
-</VirtualHost>
-EOT
+  get_conf "localhost.conf" | qt sudo tee /etc/apache2/extra/localhost.conf
 
   if ! qt grep '^# Local vhost and ssl, for \*.localhost$' "$HTTPD_CONF"; then
     cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
@@ -733,20 +630,8 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
     show_status "Found old ext-xdebug.ini, backed up to: $dir_path/conf.d/ext-xdebug.ini"
     mv "$dir_path/conf.d/ext-xdebug.ini"{,-"$NOW"}
   fi
-  show_status "Updating: $dir_path/conf.d/ext-xdebug.ini"
-  cat <<EOT > "$dir_path/conf.d/ext-xdebug.ini"
-[xdebug]
- xdebug.remote_enable=On
- xdebug.remote_host=127.0.0.1
- xdebug.remote_port=9000
- xdebug.remote_handler="dbgp"
- xdebug.remote_mode=req;
-
- xdebug.profiler_enable_trigger=1;
- xdebug.trace_enable_trigger=1;
- xdebug.trace_output_name = "trace.out.%t-%s.%u"
- xdebug.profiler_output_name = "cachegrind.out.%t-%s.%u"
-EOT
+  show_status       "Updating: $dir_path/conf.d/ext-xdebug.ini"
+  get_conf "ext-xdebug.ini" > "$dir_path/conf.d/ext-xdebug.ini"
 
   # Process php-fpm.conf for $version
   #   This is the path for 7.x, and we need to check for it 1st, because it's easier this way
@@ -840,82 +725,8 @@ else
   curl -L -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
 fi
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
-if [[ ! -d "$DEST_DIR/slipstream/webroot" ]]; then
-  mkdir -p "$DEST_DIR/slipstream/webroot"
-fi
-
-cat <<EOT > "$DEST_DIR/slipstream/webroot/index.php"
-<div style="width: 600px; margin-bottom: 16px; margin-left: auto; margin-right: auto;">
-  <h4>If you're seeing this, then it's a good sign that everything's working</h4>
-<?php
-  if( ! empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
-    \$prefix = 'non-';
-    \$url = "http://{\$_SERVER['HTTP_HOST']}/";
-  } else {
-    \$prefix = '';
-    \$url = "https://{\$_SERVER['HTTP_HOST']}/";
-  }
-  print '<p>[test ' . \$prefix . 'SSL: <a href="' . \$url . '">' . \$url . '</a>]</p>';
-?>
-
-<p>
-  Your ~/Sites folder will now automatically serve websites from folders that
-  contain a "webroot" folder/symlink, using the .localhost TLD. This means that there
-  is no need to edit the /etc/hosts file for *.localhost domains. For example, if you:
-</p>
-<pre>
-  cd ~/Sites
-  git clone git@github.com:username/your-website.git
-</pre>
-<p>
-  the website will be served at:
-  <ul>
-    <li>http://your-website.localhost/ and</li>
-    <li>http://your-site.localhost.metaltoad-sites.com/</li>
-  </ul>
-  automatically.
-</p>
-<p>
-  Because of the way the apache vhost file VirtualDocumentRoot is configured,
-  git clones that contain a "." will fail.
-</p>
-<p>
-  Note that the mysql (MariaDB) root password is: root. You can confirm it by running:
-</p>
-<pre>
-  mysql -p -u root mysql
-</pre>
-
-<p>
-  You can now access Adminer at: <a href="http://adminer.localhost/">http://adminer.localhost/</a>
-  using the same mysql credentials.
-  Optionally, you can download a
-  <a href="https://www.adminer.org/#extras" target="_blank">custom theme</a> adminer.css
-  to "$DEST_DIR/adminer/webroot/adminer.css"
-</p>
-
-<h4>These are the packages were installed</h4>
-<p>
-  <strong>Brew:</strong>
-  $(clean <(get_pkgs "brew cask")) $(clean <(get_pkgs "brew php")) $(clean <(get_pkgs "brew leaves"))
-</p>
-
-<p>
-  <strong>Gems:</strong>
-  $(clean <(get_pkgs "gem"))
-</p>
-
-<p>
-  <strong>NPM:</strong>
-  $(clean <(get_pkgs "npm"))
-</p>
-</div>
-
-<?php
-  phpinfo();
-?>
-EOT
-
+[[ ! -d "$DEST_DIR/slipstream/webroot" ]] && mkdir -p "$DEST_DIR/slipstream/webroot"
+get_conf "slipstream" > "$DEST_DIR/slipstream/webroot/index.php"
 open http://slipstream.localhost/
 # -----------------------------------------------------------------------------
 # We're done! Now,...
@@ -1007,4 +818,210 @@ grunt-cli
 js-beautify
 jshint
 # End: npm
+# -----------------------------------------------------------------------------
+# Start: mysqld_innodb.cnf
+cat <<EOT
+[mysqld]
+innodb_file_per_table = 1
+socket = /tmp/mysql.sock
+
+query_cache_type = 1
+query_cache_size = 128M
+query_cache_limit = 2M
+max_allowed_packet = 64M
+
+default_storage_engine = InnoDB
+innodb_flush_method=O_DIRECT
+innodb_buffer_pool_size = 512M
+innodb_log_buffer_size = 16M
+innodb_flush_log_at_trx_commit = 0
+# Deprecated: innodb_locks_unsafe_for_binlog = 1
+innodb_log_file_size = 256M
+
+tmp_table_size = 32M
+max_heap_table_size = 32M
+thread_cache_size = 4
+query_cache_limit = 2M
+join_buffer_size = 8M
+bind-address = 127.0.0.1
+key_buffer_size = 256M
+EOT
+# End: mysqld_innodb.cnf
+# -----------------------------------------------------------------------------
+# Start: localhost.conf
+cat <<EOT
+<VirtualHost *:80>
+  ServerAdmin $USER@localhost
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io
+  VirtualDocumentRoot $DEST_DIR/%1/webroot
+
+  UseCanonicalName Off
+
+  LogFormat "%V %h %l %u %t \"%r\" %s %b" vcommon
+  CustomLog "/var/log/apache2/access_log" vcommon
+  ErrorLog "/var/log/apache2/error_log"
+
+  # With the switch to php-fpm, the apache2/other/php5.conf is not "Include"-ed, so need to...
+  AddType application/x-httpd-php .php
+  AddType application/x-httpd-php-source .phps
+
+  <IfModule dir_module>
+    DirectoryIndex index.html index.php
+  </IfModule>
+
+  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
+  #   http://serverfault.com/a/672969
+  #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
+  # This is to forward all PHP to php-fpm.
+  <FilesMatch \\.php$>
+    SetHandler "${PHP_FPM_HANDLER}"
+  </FilesMatch>
+
+  <Proxy ${PHP_FPM_PROXY}>
+    ProxySet connectiontimeout=5 timeout=1800
+  </Proxy>
+
+  <Directory "$DEST_DIR">
+    AllowOverride All
+    Options +Indexes +FollowSymLinks +ExecCGI
+    Require all granted
+    RewriteBase /
+  </Directory>
+</VirtualHost>
+
+Listen 443
+<VirtualHost *:443>
+  ServerAdmin $USER@localhost
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
+  VirtualDocumentRoot $DEST_DIR/%1/webroot
+
+  SSLEngine On
+  SSLCertificateFile    /private/etc/apache2/ssl/server.crt
+  SSLCertificateKeyFile /private/etc/apache2/ssl/server.key
+
+  UseCanonicalName Off
+
+  LogFormat "%V %h %l %u %t \"%r\" %s %b" vcommon
+  CustomLog "/var/log/apache2/access_log" vcommon
+  ErrorLog "/var/log/apache2/error_log"
+
+  # With the switch to php-fpm, the apache2/other/php5.conf is not "Include"-ed, so need to...
+  AddType application/x-httpd-php .php
+  AddType application/x-httpd-php-source .phps
+
+  <IfModule dir_module>
+    DirectoryIndex index.html index.php
+  </IfModule>
+
+  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
+  #   http://serverfault.com/a/672969
+  #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
+  # This is to forward all PHP to php-fpm.
+  <FilesMatch \\.php$>
+    SetHandler "${PHP_FPM_HANDLER}"
+  </FilesMatch>
+
+  <Proxy ${PHP_FPM_PROXY}>
+    ProxySet connectiontimeout=5 timeout=240
+  </Proxy>
+
+  <Directory "$DEST_DIR">
+    AllowOverride All
+    Options +Indexes +FollowSymLinks +ExecCGI
+    Require all granted
+    RewriteBase /
+  </Directory>
+</VirtualHost>
+EOT
+# End: localhost.conf
+# -----------------------------------------------------------------------------
+# Start: ext-xdebug.ini
+cat <<EOT
+[xdebug]
+ xdebug.remote_enable=On
+ xdebug.remote_host=127.0.0.1
+ xdebug.remote_port=9000
+ xdebug.remote_handler="dbgp"
+ xdebug.remote_mode=req;
+
+ xdebug.profiler_enable_trigger=1;
+ xdebug.trace_enable_trigger=1;
+ xdebug.trace_output_name = "trace.out.%t-%s.%u"
+ xdebug.profiler_output_name = "cachegrind.out.%t-%s.%u"
+EOT
+# End: ext-xdebug.ini
+# -----------------------------------------------------------------------------
+# Start: slipstream
+cat <<EOT
+<div style="width: 600px; margin-bottom: 16px; margin-left: auto; margin-right: auto;">
+  <h4>If you're seeing this, then it's a good sign that everything's working</h4>
+<?php
+  if( ! empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
+    \$prefix = 'non-';
+    \$url = "http://{\$_SERVER['HTTP_HOST']}/";
+  } else {
+    \$prefix = '';
+    \$url = "https://{\$_SERVER['HTTP_HOST']}/";
+  }
+  print '<p>[test ' . \$prefix . 'SSL: <a href="' . \$url . '">' . \$url . '</a>]</p>';
+?>
+
+<p>
+  Your ~/Sites folder will now automatically serve websites from folders that
+  contain a "webroot" folder/symlink, using the .localhost TLD. This means that there
+  is no need to edit the /etc/hosts file for *.localhost domains. For example, if you:
+</p>
+<pre>
+  cd ~/Sites
+  git clone git@github.com:username/your-website.git
+</pre>
+<p>
+  the website will be served at:
+  <ul>
+    <li>http://your-website.localhost/ and</li>
+    <li>http://your-site.localhost.metaltoad-sites.com/</li>
+  </ul>
+  automatically.
+</p>
+<p>
+  Because of the way the apache vhost file VirtualDocumentRoot is configured,
+  git clones that contain a "." will fail.
+</p>
+<p>
+  Note that the mysql (MariaDB) root password is: root. You can confirm it by running:
+</p>
+<pre>
+  mysql -p -u root mysql
+</pre>
+
+<p>
+  You can now access Adminer at: <a href="http://adminer.localhost/">http://adminer.localhost/</a>
+  using the same mysql credentials.
+  Optionally, you can download a
+  <a href="https://www.adminer.org/#extras" target="_blank">custom theme</a> adminer.css
+  to "$DEST_DIR/adminer/webroot/adminer.css"
+</p>
+
+<h4>These are the packages were installed</h4>
+<p>
+  <strong>Brew:</strong>
+  $(clean <(get_pkgs "brew cask")) $(clean <(get_pkgs "brew php")) $(clean <(get_pkgs "brew leaves"))
+</p>
+
+<p>
+  <strong>Gems:</strong>
+  $(clean <(get_pkgs "gem"))
+</p>
+
+<p>
+  <strong>NPM:</strong>
+  $(clean <(get_pkgs "npm"))
+</p>
+</div>
+
+<?php
+  phpinfo();
+?>
+EOT
+# End: slipstream
 # -----------------------------------------------------------------------------
