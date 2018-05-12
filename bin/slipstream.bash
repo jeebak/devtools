@@ -42,27 +42,6 @@ EOT
     die "Yikes! Please don't run this as root!" 127
   fi
 fi
-# -- CHECK MAC AND VERSION ----------------------------------------------------
-if [[ $OSTYPE == darwin* ]]; then
-  OSX_VERSION="$(sw_vers -productVersion)"
-
-  if [[ ! "$OSX_VERSION" =~ 10.1[0123] ]]; then
-    cat <<EOT
-Sorry! This script is currently only compatible with:
-  Yosemite    (10.10*)
-  El Capitan  (10.11*)
-  Sierra      (10.12*)
-  High Sierra (10.13*)
-You're running:
-
-$(sw_vers)
-
-EOT
-    exit 127
-  fi
-else
-  die "Oops! This script was only meant for Mac OS X" 127
-fi
 # -- HELPER FUNCTIONS, PT. 2 --------------------------------------------------
 # Parse out .data sections of this file
 function get_pkgs() {
@@ -86,6 +65,17 @@ function clean_up() {
 }
 
 trap clean_up EXIT INT QUIT TERM
+# -- CHECK MAC AND VERSION ----------------------------------------------------
+if [[ $OSTYPE == darwin* ]]; then
+  OSX_VERSION="$(sw_vers -productVersion)"
+
+  if [[ ! "$OSX_VERSION" =~ 10.1[0123] ]]; then
+    get_conf "system-requirement"
+    exit 127
+  fi
+else
+  die "Oops! This script was only meant for Mac OS X" 127
+fi
 # -----------------------------------------------------------------------------
 # Strip out comments, beginning and trailing whitespace, [ :].*$, and blank lines
 function clean() {
@@ -259,28 +249,7 @@ if ! qt xcode-select -p; then
   exit
 fi
 # -- OVERVIEW OF CHANGES THAT WILL BE MADE ------------------------------------
-cat <<EOT
-
-OK. It looks like we're ready to go.
-*******************************************************************************
-***** NOTE: This script assumes a "pristine" installation of Yosemite,    *****
-***** El Capitan, or Sierra. If you've already made changes to files in   *****
-***** /etc, then all bets are off. You have been WARNED!                  *****
-*******************************************************************************
-If you wish to continue, then this is what I'll be doing:
-  - Git-ifying your /etc folder
-  - Allow for password-less sudo by altering /etc/sudoers
-  - Install home brew, and some brew packages
-  - Update the System Ruby Gem, and install some gems
-  - Install some npm packages
-  -- Configure:
-    - Postfix (Disable outgoing mail)
-    - MariaDB (InnoDB tweaks, etc.)
-    - Php.ini (Misc. configurations)
-    - Apache2 (Enable modules, and add wildcard vhost conf)
-      [including ServerAlias for *.localhost.metaltoad-sites.com, and *.xip.io]
-    - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
-EOT
+get_conf "all-systems-go"
 
 # shellcheck disable=SC2034
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
@@ -818,6 +787,45 @@ grunt-cli
 js-beautify
 jshint
 # End: npm
+# -----------------------------------------------------------------------------
+# Start: system-requirement
+cat <<EOT
+Sorry! This script is currently only compatible with:
+  Yosemite    (10.10*)
+  El Capitan  (10.11*)
+  Sierra      (10.12*)
+  High Sierra (10.13*)
+You're running:
+
+$(sw_vers)
+
+EOT
+# End: system-requirement
+# -----------------------------------------------------------------------------
+# Start: all-systems-go
+cat <<EOT
+
+OK. It looks like we're ready to go.
+*******************************************************************************
+***** NOTE: This script assumes a "pristine" installation of Yosemite,    *****
+***** El Capitan, or Sierra. If you've already made changes to files in   *****
+***** /etc, then all bets are off. You have been WARNED!                  *****
+*******************************************************************************
+If you wish to continue, then this is what I'll be doing:
+  - Git-ifying your /etc folder
+  - Allow for password-less sudo by altering /etc/sudoers
+  - Install home brew, and some brew packages
+  - Update the System Ruby Gem, and install some gems
+  - Install some npm packages
+  -- Configure:
+    - Postfix (Disable outgoing mail)
+    - MariaDB (InnoDB tweaks, etc.)
+    - Php.ini (Misc. configurations)
+    - Apache2 (Enable modules, and add wildcard vhost conf)
+      [including ServerAlias for *.localhost.metaltoad-sites.com, and *.xip.io]
+    - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
+EOT
+# End: all-systems-go
 # -----------------------------------------------------------------------------
 # Start: mysqld_innodb.cnf
 cat <<EOT
