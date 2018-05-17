@@ -239,6 +239,23 @@ function genssl() {
   # Step 4: Generating a Self-Signed Certificate
   openssl x509 -req -days 3650 -in "${domain}.csr" -signkey "${domain}.key" -out "${domain}.crt"
 }
+
+# Given: "max_execution_time = 0"
+# echo's: "s|;*[[:space:]]*max_execution_time[[:space:]]*=[[:space:]]*.*|max_execution_time = 0|"
+function get_ini_sed_script() {
+  local i pre peri post sed_script
+
+  pre=';*[[:space:]]*'
+  post='[[:space:]]*=[[:space:]]*.*'
+  sed_script=""
+
+  for i in "$@"; do
+    peri="${i%% *}"
+    sed_script="${sed_script}s|${pre}${peri}${post}|$i|"$'\n'
+  done
+
+  echo "$sed_script"
+}
 # -- CHECK AND INSTALL XCODE CLI TOOLS ----------------------------------------
 # .text
 if ! qt xcode-select -p; then
@@ -571,26 +588,34 @@ echo "== Processing Brew PHP / php.ini / Xdebug =="
 
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
 
+ini_settings=(
+  "max_execution_time = 0"
+  "max_input_time = 1800"
+  "max_input_vars = 10000"
+  "memory_limit = 256M"
+  "display_errors = On"
+  "display_startup_errors = On"
+  "error_log = /var/log/apache2/php_errors.log"
+  "date.timezone = America/Los_Angeles"
+  "pdo_mysql.default_socket = /tmp/mysql.sock"
+  "mysql.default_socket = /tmp/mysql.sock"
+  "mysqli.default_socket = /tmp/mysql.sock"
+  "upload_max_filesize = 100M"
+)
+
+conf_settings=(
+  "listen = $PHP_FPM_LISTEN"
+  "listen.mode = 0666"
+  "pm.max_children = 10"
+)
+
 for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
   dir_path="${i%/*}"
   version="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$i")"
 
   # Process php.ini for $version
   show_status "Updating some $i settings"
-  sed -i.bak '
-    s|max_execution_time = 30|max_execution_time = 0|
-    s|max_input_time = 60|max_input_time = 1800|
-    s|; *max_input_vars = 1000|max_input_vars = 10000|
-    s|memory_limit = 128M|memory_limit = 256M|
-    s|display_errors = Off|display_errors = On|
-    s|display_startup_errors = Off|display_startup_errors = On|
-    s|;error_log = php_errors.log|error_log = /var/log/apache2/php_errors.log|
-    s|;date.timezone =|date.timezone = America/Los_Angeles|
-    s|pdo_mysql.default_socket=.*|pdo_mysql.default_socket="/tmp/mysql.sock"|
-    s|mysql.default_socket =.*|mysql.default_socket = "/tmp/mysql.sock"|
-    s|mysqli.default_socket =.*|mysqli.default_socket = "/tmp/mysql.sock"|
-    s|upload_max_filesize = 2M|upload_max_filesize = 100M|
-  ' "$i"
+  sed -i.bak "$(get_ini_sed_script "${ini_settings[@]}")" "$i"
   mv "${i}.bak" "${i}.${NOW}-post-process"
   show_status "Original saved to: ${i}.${NOW}-post-process"
 
@@ -615,9 +640,7 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
   if [[ ! -z "$php_fpm_conf" ]] && ! qt grep -E "^listen[[:space:]]*=[[:space:]]*$PHP_FPM_LISTEN" "$php_fpm_conf"; then
     show_status "Updating $php_fpm_conf"
     sed -i.bak "
-      s|^listen[[:space:]]*=[[:space:]]*.*|listen = $PHP_FPM_LISTEN|
-      s|[;]*listen.mode[[:space:]]*=[[:space:]]*.*|listen.mode = 0666|
-      s|[;]*pm.max_children[[:space:]]*=[[:space:]]*.*|pm.max_children = 10|
+      $(get_ini_sed_script "${conf_settings[@]}")
       /^user[[:space:]]*=[[:space:]]*.*/ s|^|;|
       /^group[[:space:]]*=[[:space:]]*.*/ s|^|;|
     " "$php_fpm_conf"
