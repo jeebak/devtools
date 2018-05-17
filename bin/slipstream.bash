@@ -679,7 +679,7 @@ sudo apachectl -k restart
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
 show_status 'Setting up adminer'
-[[ -d   "$DEST_DIR/adminer/webroot" ]] && mkdir -p  "$DEST_DIR/adminer/webroot"
+[[ ! -d "$DEST_DIR/adminer/webroot" ]] && mkdir  -p "$DEST_DIR/adminer/webroot"
 [[ ! -w "$DEST_DIR/adminer/webroot" ]] && chmod u+w "$DEST_DIR/adminer/webroot"
 latest="$(curl -IkLs https://github.com/vrana/adminer/releases/latest | col -b | grep Location | grep -E -o '[^/]+$')"
 
