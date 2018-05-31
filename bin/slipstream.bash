@@ -589,17 +589,20 @@ echo "== Processing Brew PHP / php.ini / Xdebug =="
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
 
 ini_settings=(
+  "date.timezone = America/Los_Angeles"
+  "display_errors = On"
+  "display_startup_errors = On"
+  "error_log = /var/log/apache2/php_errors.log"
   "max_execution_time = 0"
   "max_input_time = 1800"
   "max_input_vars = 10000"
   "memory_limit = 256M"
-  "display_errors = On"
-  "display_startup_errors = On"
-  "error_log = /var/log/apache2/php_errors.log"
-  "date.timezone = America/Los_Angeles"
-  "pdo_mysql.default_socket = /tmp/mysql.sock"
   "mysql.default_socket = /tmp/mysql.sock"
   "mysqli.default_socket = /tmp/mysql.sock"
+  "pdo_mysql.default_socket = /tmp/mysql.sock"
+  "post_max_size = 100M"
+  "realpath_cache_size = 128K"
+  "realpath_cache_ttl = 3600"
   "upload_max_filesize = 100M"
 )
 
