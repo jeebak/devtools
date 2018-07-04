@@ -209,7 +209,7 @@ function etc_git_commit() {
   local msg
 
   msg="$2"
-  show_status 'Committing to git'
+  show_status "Committing to git"
   sudo -H bash -c " cd /etc/ ; $1 ; git commit -m '[Slipstream] $msg' "
 }
 
@@ -394,13 +394,13 @@ echo "== Processing MariaDB =="
 # brew info mariadb
 [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
 if qt ls "$BREW_PREFIX/opt/mariadb/"*.plist && ! qt ls ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist; then
-  show_status 'Linking MariaDB LaunchAgent plist'
+  show_status "Linking MariaDB LaunchAgent plist"
   ln -sfv "$BREW_PREFIX/opt/mariadb/"*.plist ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist
 fi
 
 [[ ! -d /etc/homebrew/etc/my.cnf.d ]] && sudo mkdir -p /etc/homebrew/etc/my.cnf.d
 if [[ ! -f /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf ]]; then
-  show_status 'Creating: /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf'
+  show_status "Creating: /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf"
   get_conf "mysqld_innodb.cnf" | qt sudo tee /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
 
   show_status "Linking to: $BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
@@ -411,10 +411,10 @@ fi
 # TOOO: ps aux | grep mariadb and prehaps use nc to test if port is open
 # brew info mariadb
 if ! qt launchctl list homebrew.mxcl.mariadb; then
-  show_status 'Loading: ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist'
+  show_status "Loading: ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist"
   launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist
 
-  show_status 'Setting mysql root password... waiting for mysqld to start'
+  show_status "Setting mysql root password... waiting for mysqld to start"
   # Just sleep, waiting for mariadb to start
   sleep 7
   mysql -u root mysql <<< "SET SQL_SAFE_UPDATES = 0; UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES; SET SQL_SAFE_UPDATES = 1;"
@@ -424,7 +424,7 @@ echo "== Processing Apache =="
 
 HTTPD_CONF="/etc/apache2/httpd.conf"
 
-show_status 'Updating httpd.conf settings'
+show_status "Updating httpd.conf settings"
 for i in \
   'LoadModule socache_shmcb_module ' \
   'LoadModule ssl_module ' \
@@ -526,7 +526,7 @@ sudo rm "${HTTPD_CONF}.bak"
 # https://clickontyler.com/support/a/38/how-start-apache-automatically/
 
 if ! qt sudo launchctl list org.apache.httpd; then
-  show_status 'Loading: /System/Library/LaunchDaemons/org.apache.httpd.plist'
+  show_status "Loading: /System/Library/LaunchDaemons/org.apache.httpd.plist"
   sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist
 fi
 # -- WILDCARD DNS -------------------------------------------------------------
@@ -536,14 +536,14 @@ echo "== Processing Dnsmasq =="
 #  add symlinks as non-root to $BREW_PREFIX/etc files
 
 if qt ls "$BREW_PREFIX/opt/dnsmasq/"*.plist && ! qt ls /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist; then
-  show_status 'Linking Dnsmasq LaunchAgent plist'
+  show_status "Linking Dnsmasq LaunchAgent plist"
   # brew info dnsmasq
   sudo cp -fv "$BREW_PREFIX/opt/dnsmasq/"*.plist /Library/LaunchDaemons
   sudo chown root /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
 fi
 
 if [[ ! -f /etc/homebrew/etc/dnsmasq.conf ]] || qt grep '^address=/.dev/127.0.0.1$' /etc/homebrew/etc/dnsmasq.conf; then
-  show_status 'Creating: /etc/homebrew/etc/dnsmasq.conf'
+  show_status "Creating: /etc/homebrew/etc/dnsmasq.conf"
   cat <<EOT | qt sudo tee /etc/homebrew/etc/dnsmasq.conf
 address=/.localhost/127.0.0.1
 EOT
@@ -560,7 +560,7 @@ fi
 
 # brew info dnsmasq
 if ! qt sudo launchctl list homebrew.mxcl.dnsmasq; then
-  show_status 'Loading: /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist'
+  show_status "Loading: /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist"
   sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
 fi
 
@@ -653,7 +653,7 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
 done
 
 if [[ -d /etc/homebrew/etc/apache2 ]]; then
-  show_status 'Deleting homebrew/etc/apache2 for switch to php-fpm'
+  show_status "Deleting homebrew/etc/apache2 for switch to php-fpm"
   sudo rm -rf /etc/homebrew/etc/apache2
   etc_git_commit "git rm -r homebrew/etc/apache2" "Deleting homebrew/etc/apache2 for switch to php-fpm"
 fi
@@ -704,7 +704,7 @@ qt popd
 sudo apachectl -k restart
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
-show_status 'Setting up adminer'
+show_status "Setting up adminer"
 [[ ! -d "$DEST_DIR/adminer/webroot" ]] && mkdir  -p "$DEST_DIR/adminer/webroot"
 [[ ! -w "$DEST_DIR/adminer/webroot" ]] && chmod u+w "$DEST_DIR/adminer/webroot"
 latest="$(curl -IkLs https://github.com/vrana/adminer/releases/latest | col -b | grep Location | grep -E -o '[^/]+$')"
@@ -712,7 +712,7 @@ latest="$(curl -IkLs https://github.com/vrana/adminer/releases/latest | col -b |
 if [[ -e "$DEST_DIR/adminer/webroot/index.php" ]]; then
   if [[ "$(grep '\* @version' "$DEST_DIR/adminer/webroot/index.php" | grep -E -o '[0-9]+.*')" != "${latest/v/}" ]]; then
     rm -f  "$DEST_DIR/adminer/webroot/index.php"
-    show_status 'Updating adminer to latest version'
+    show_status "Updating adminer to latest version"
     curl -L -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
   fi
 else
@@ -903,7 +903,7 @@ cat <<EOT
     DirectoryIndex index.html index.php
   </IfModule>
 
-  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
+  # Depends on: "LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so" in $HTTPD_CONF
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
@@ -947,7 +947,7 @@ Listen 443
     DirectoryIndex index.html index.php
   </IfModule>
 
-  # Depends on: LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so in $HTTPD_CONF
+  # Depends on: "LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so" in $HTTPD_CONF
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
