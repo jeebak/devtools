@@ -847,8 +847,9 @@ If you wish to continue, then this is what I'll be doing:
     - Postfix (Disable outgoing mail)
     - MariaDB (InnoDB tweaks, etc.)
     - Php.ini (Misc. configurations)
-    - Apache2 (Enable modules, and add wildcard vhost conf)
-      [including ServerAlias for *.localhost.metaltoad-sites.com, and *.xip.io]
+    - Apache2 (Enable modules, and add wildcard vhost conf) [including
+      - ServerAlias for *.nip.io, *.xip.io for <anything>.<IP Address>.nip.io
+        *.localhost.metaltoad-sites.com, *.lvh.me, and *.vcap.me for localhost]
     - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
 EOT
 # End: all-systems-go
@@ -886,7 +887,7 @@ EOT
 cat <<EOT
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io *.nip.io *.lvh.me *.vcap.me
   VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   UseCanonicalName Off
@@ -926,7 +927,7 @@ cat <<EOT
 Listen 443
 <VirtualHost *:443>
   ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io *.nip.io *.lvh.me *.vcap.me
   VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   SSLEngine On
