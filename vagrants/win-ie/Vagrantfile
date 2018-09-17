@@ -16,6 +16,11 @@ boxes = {
   "win10-edge" => "MsEdge - Win10.box",
 }
 
+# required_plugins = %w( vagrant-triggers vagrant-vbox-snapshot )
+required_plugins = %w( )
+vagrant_root = File.dirname(__FILE__)
+box_exists = false
+
 if ARGV[1] == "win10-edge" && ! ( File.exist?(boxes["win10-edge"]) || File.exist?("#{vagrant_root}/.vagrant/machines/#{ARGV[1]}/virtualbox/id") )
   puts <<EOT
 
@@ -36,11 +41,6 @@ virtual is up and running, you may delete both the .zip and the .box file.
 EOT
   exit
 end
-
-# required_plugins = %w( vagrant-triggers vagrant-vbox-snapshot )
-required_plugins = %w( )
-vagrant_root = File.dirname(__FILE__)
-box_exists = false
 
 if ARGV[0] == "up"
   if ARGV.count == 1
