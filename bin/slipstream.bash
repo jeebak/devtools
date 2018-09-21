@@ -678,14 +678,14 @@ while read -r -u3 service && [[ ! -z "$service" ]]; do
   qte brew services stop "$service"
 done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' started ' | cut -f1 -d' ')
 
-# Make php@5.6 the default
+# Make php@7.1 the default
 [[ ! -d "$BREW_PREFIX/var/log/" ]] && mkdir -p "$BREW_PREFIX/var/log/"
-brew services start php@5.6
+brew services start php@7.1
 
 brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
-  brew link --overwrite --force php@5.6
+  brew link --overwrite --force php@7.1
 fi
 
 # Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
