@@ -69,7 +69,7 @@ trap clean_up EXIT INT QUIT TERM
 if [[ $OSTYPE == darwin* ]]; then
   OSX_VERSION="$(sw_vers -productVersion)"
 
-  if [[ ! "$OSX_VERSION" =~ 10.1[0123] ]]; then
+  if [[ ! "$OSX_VERSION" =~ 10.1[01234] ]]; then
     get_conf "system-requirement"
     exit 127
   fi
@@ -821,6 +821,7 @@ Sorry! This script is currently only compatible with:
   El Capitan  (10.11*)
   Sierra      (10.12*)
   High Sierra (10.13*)
+  Mojave      (10.14*)
 You're running:
 
 $(sw_vers)
