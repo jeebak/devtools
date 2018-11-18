@@ -133,15 +133,14 @@ function process() {
           if pecl_pkg="$(sed 's/#.*$//' <<< "$pecl_pkg")" && [[ ! -z "$pecl_pkg" ]]; then
             # We're not checking to see if it's already installed
 
+            show_status "PECL: Installing: $pecl_pkg"
             # This entire block is to accommodate php@5.6 :/
             if [[ "$line" =~ @ ]] && [[ "$pecl_pkg" =~ $line ]]; then
               # TODO: refine this for multiple versions
               pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
-              show_status "PECL: Installing: $pecl_pkg"
               qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
             else
               pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
-              show_status "PECL: Installing: $pecl_pkg"
               qt env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
                   CFLAGS='-fgnu89-inline' \
                   LDFLAGS='-fgnu89-inline' \
