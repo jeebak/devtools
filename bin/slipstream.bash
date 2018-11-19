@@ -1040,7 +1040,9 @@ cat <<EOT
 <h4>These are the packages were installed</h4>
 <p>
   <strong>Brew:</strong>
-  $(clean <(get_pkgs "brew cask")) $(clean <(get_pkgs "brew php")) $(clean <(get_pkgs "brew leaves"))
+  $(clean <(get_pkgs "brew cask"))
+  $(clean <(get_pkgs "brew php"))
+  $(clean <(get_pkgs "brew leaves"))
 </p>
 
 <p>
