@@ -355,9 +355,8 @@ process "brew php"
 
 show_status "brew leaves"
 process "brew leaves"
-# -- UPDATE AND INSTALL GEMS --------------------------------------------------
+# -- INSTALL RUBY / GEMS ------------------------------------------------------
 echo "== Processing Gem =="
-# sudo gem update --system
 show_status "gem"
 process "gem"
 # -- INSTALL NPM PACKAGES -----------------------------------------------------
@@ -383,7 +382,7 @@ EOT
 fi
 
 qt pushd /etc/
-if git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
+if sudo git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
   etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
 fi
 qt popd
@@ -421,7 +420,8 @@ fi
 # -- SETUP APACHE -------------------------------------------------------------
 echo "== Processing Apache =="
 
-HTTPD_CONF="/etc/apache2/httpd.conf"
+APACHE_BASE="/etc/apache2"
+HTTPD_CONF="$APACHE_BASE/httpd.conf"
 
 show_status "Updating httpd.conf settings"
 for i in \
@@ -445,13 +445,15 @@ DEST_DIR="/Users/$USER/Sites"
 
 [[ ! -d "$DEST_DIR" ]] && mkdir -p "$DEST_DIR"
 
-if [[ ! -d "/etc/apache2/ssl" ]]; then
+if [[ ! -d "$APACHE_BASE/ssl" ]]; then
+  show_status "Add httpd/ssl files"
+
   mkdir -p "$$/ssl"
   qt pushd "$$/ssl"
   genssl
   qt popd
-  sudo mv "$$/ssl" /etc/apache2
-  sudo chown -R root:wheel /etc/apache2/ssl
+  sudo mv "$$/ssl" "$APACHE_BASE"
+  sudo chown -R root:wheel "$APACHE_BASE/ssl"
   rmdir "$$"
 
   etc_git_commit "git add apache2/ssl" "Add apache2/ssl files"
@@ -472,7 +474,7 @@ PHP_FPM_PROXY="fcgi://localhost/"
 
 [[ ! -d "$BREW_PREFIX/var/run" ]] && mkdir -p "$BREW_PREFIX/var/run"
 
-if [[ -f /etc/apache2/extra/dev.conf ]]; then
+if [[ -f "$APACHE_BASE/extra/dev.conf" ]]; then
   etc_git_commit "git rm apache2/extra/dev.conf" "Remove apache2/extra/dev.conf"
 fi
 
@@ -484,22 +486,22 @@ if qt grep '^# Local vhost and ssl, for \*.dev$'                        "$HTTPD_
   etc_git_commit "git add $HTTPD_CONF" "Remove references to .dev from $HTTPD_CONF"
 fi
 
-if [[ ! -f /etc/apache2/extra/localhost.conf ]] || ! qt grep "$PHP_FPM_HANDLER" /etc/apache2/extra/localhost.conf || ! qt grep \\.localhost\\.metaltoad-sites\\.com /etc/apache2/extra/localhost.conf || ! qt grep \\.xip\\.io /etc/apache2/extra/localhost.conf; then
-  get_conf "localhost.conf" | qt sudo tee /etc/apache2/extra/localhost.conf
+if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]] || ! qt grep "$PHP_FPM_HANDLER" "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.localhost\\.metaltoad-sites\\.com "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.xip\\.io "$APACHE_BASE/extra/localhost.conf"; then
+  get_conf "localhost.conf" | qt sudo tee "$APACHE_BASE/extra/localhost.conf"
 
   if ! qt grep '^# Local vhost and ssl, for \*.localhost$' "$HTTPD_CONF"; then
     cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
 
 # Local vhost and ssl, for *.localhost
-Include /private/etc/apache2/extra/localhost.conf
+Include $APACHE_BASE/extra/localhost.conf
 EOT
   fi
 
   etc_git_commit "git add apache2/extra/localhost.conf" "Add apache2/extra/localhost.conf"
 else
-  if qt grep ' ProxySet connectiontimeout=5 timeout=240$' /etc/apache2/extra/localhost.conf; then
-    sudo sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' /etc/apache2/extra/localhost.conf
-    sudo rm /etc/apache2/extra/localhost.conf.bak
+  if qt grep ' ProxySet connectiontimeout=5 timeout=240$' "$APACHE_BASE/extra/localhost.conf"; then
+    sudo sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' "$APACHE_BASE/extra/localhost.conf"
+    sudo rm "$APACHE_BASE/extra/localhost.conf.bak"
 
     etc_git_commit "git add apache2/extra/localhost.conf" "Update apache2/extra/localhost.conf ProxySet timeout value to 1800"
   fi
@@ -651,10 +653,10 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
   fi
 done
 
-if [[ -d /etc/homebrew/etc/apache2 ]]; then
-  show_status "Deleting homebrew/etc/apache2 for switch to php-fpm"
-  sudo rm -rf /etc/homebrew/etc/apache2
-  etc_git_commit "git rm -r homebrew/etc/apache2" "Deleting homebrew/etc/apache2 for switch to php-fpm"
+if [[ -d "/etc/homebrew/$APACHE_BASE" ]]; then
+  show_status "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
+  sudo rm -rf "/etc/homebrew/$APACHE_BASE"
+  etc_git_commit "git rm -r homebrew/$APACHE_BASE" "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
 fi
 
 if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
@@ -691,8 +693,8 @@ fi
 # keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
 #   http://apple.stackexchange.com/questions/211015/el-capitan-apache-error-message-ah00526
 # This simple commenting out of the line seems to work just fine.
-sudo sed -i.bak 's;^\(LockFile\);# \1;' /etc/apache2/extra/httpd-mpm.conf
-sudo rm -f /etc/apache2/extra/httpd-mpm.conf.bak
+sudo sed -i.bak 's;^\(LockFile\);# \1;' "$APACHE_BASE/extra/httpd-mpm.conf"
+sudo rm -f "$APACHE_BASE/extra/httpd-mpm.conf.bak"
 
 qt pushd /etc/
 if git status | qt grep 'apache2/extra/httpd-mpm.conf'; then
@@ -931,8 +933,8 @@ Listen 443
   VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   SSLEngine On
-  SSLCertificateFile    /private/etc/apache2/ssl/server.crt
-  SSLCertificateKeyFile /private/etc/apache2/ssl/server.key
+  SSLCertificateFile    $APACHE_BASE/ssl/server.crt
+  SSLCertificateKeyFile $APACHE_BASE/ssl/server.key
 
   UseCanonicalName Off
 
