@@ -347,7 +347,6 @@ show_status "brew tap"
 process "brew tap"
 
 show_status "brew cask"
-qt brew cask --version || brew install caskroom/cask/brew-cask
 process "brew cask"
 
 show_status "brew php"
