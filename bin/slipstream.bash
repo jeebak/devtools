@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# set -eo pipefail
+
 # -- HELPER FUNCTIONS, PT. 1 --------------------------------------------------
 DEBUG=NotEmpty
 DEBUG=
@@ -86,10 +88,11 @@ function clean() {
 function process() {
   local brew_php_linked debug extra line pecl_pkg num_ver
 
-  debug="$([[ ! -z "$DEBUG" ]] && echo echo)"
+  debug="$([[ ! -z "$DEBUG" ]] && echo echo || true)"
 
   # Compare what is already installed with what we want installed
-  while read -r -u3 -a line && [[ ! -z "$line" ]]; do
+  while read -r -u3 -a line; do
+    [[ -z "$line" ]] && continue
     show_status "($1) $line"
     case "$1" in
       'brew tap')
@@ -103,8 +106,8 @@ function process() {
       'brew php')
         [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
 
-        brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
-        num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+')"
+        brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]* || true)"
+        num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+' || true)"
 
         if [[ ! -z "$brew_php_linked" ]]; then
           if [[ "$line" != "$brew_php_linked" ]]; then
@@ -124,31 +127,36 @@ function process() {
 
         show_status "Installing PECLs for: $line"
 
-        $debug "$BREW_PREFIX/opt/$line/bin/pecl" channel-update pecl.php.net
+        if [[ -x "$BREW_PREFIX/opt/$line/bin/pecl" ]]; then
+          $debug "$BREW_PREFIX/opt/$line/bin/pecl" channel-update pecl.php.net
 
-        # This inner loop to install pecl packages for specific php versions'
-        # only run when the brew install for the specific version's run, i.e.,
-        # pecl installation's not separate/standalone, currently.
-        while read -r -u4 pecl_pkg; do
-          if pecl_pkg="$(sed 's/#.*$//' <<< "$pecl_pkg")" && [[ ! -z "$pecl_pkg" ]]; then
-            # We're not checking to see if it's already installed
+          # This inner loop to install pecl packages for specific php versions'
+          # only run when the brew install for the specific version's run, i.e.,
+          # pecl installation's not separate/standalone, currently.
+          while read -r -u4 pecl_pkg; do
+            if pecl_pkg="$(sed 's/#.*$//' <<< "$pecl_pkg" || true)"; then
+              [[ -z "$pecl_pkg" ]] && continue
+              # We're not checking to see if it's already installed
 
-            show_status "PECL: Installing: $pecl_pkg"
-            # This entire block is to accommodate php@5.6 :/
-            if [[ "$line" =~ @ ]] && [[ "$pecl_pkg" =~ $line ]]; then
-              # TODO: refine this for multiple versions
-              pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
-              qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
-            else
-              pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
-              qt env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
-                  CFLAGS='-fgnu89-inline' \
-                  LDFLAGS='-fgnu89-inline' \
-                  CXXFLAGS='-fgnu89-inline' \
-                "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
+              show_status "PECL: Installing: $pecl_pkg"
+              # This entire block is to accommodate php@5.6 :/
+              if [[ "$line" =~ @ ]] && [[ "$pecl_pkg" =~ $line ]]; then
+                # TODO: refine this for multiple versions
+                pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
+                # TODO: better error handling
+                qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+              else
+                pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
+                # TODO: better error handling
+                qt env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
+                    CFLAGS='-fgnu89-inline' \
+                    LDFLAGS='-fgnu89-inline' \
+                    CXXFLAGS='-fgnu89-inline' \
+                  "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+              fi
             fi
-          fi
-        done 4< <(get_pkgs "pecl")
+          done 4< <(get_pkgs "pecl")
+        fi
         ;;
       gem)
         # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
@@ -282,7 +290,7 @@ if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; the
   show_status "Making sudo password-less for 'admin' group"
   sudo sed -i.bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
 
-  if qt diff /etc/sudoers /etc/sudoers.bak; then
+  if qt sudo diff /etc/sudoers /etc/sudoers.bak; then
     echo "No change made to: /etc/sudoers"
   else
     etc_git_commit "git add sudoers" 'Password-less sudo for "admin" group'
@@ -627,7 +635,7 @@ done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' starte
 [[ ! -d "$BREW_PREFIX/var/log/" ]] && mkdir -p "$BREW_PREFIX/var/log/"
 brew services start php@7.1
 
-brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]*)"
+brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]* || true)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite --force php@7.1
