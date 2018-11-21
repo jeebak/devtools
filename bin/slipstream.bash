@@ -150,23 +150,16 @@ function process() {
           fi
         done 4< <(get_pkgs "pecl")
         ;;
-      npm)
-        SUDO=
-        $debug $SUDO npm install -g "${line[@]}";;
       gem)
-        SUDO=sudo
-        # shellcheck disable=SC2012
-        if [[ "$(ls -ld "$(command -v gem)" | awk '{print $3}')" != 'root' ]]; then
-          SUDO=
-        fi
-
         # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
         if qt command -v csrutil && csrutil status | qt grep enabled; then
           extra=(-n $BREW_PREFIX/bin)
         fi
 
         line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
-        $debug $SUDO "$1" install -f "${extra[@]}" "${line[@]}";;
+        $debug gem install -f "${extra[@]}" "${line[@]}";;
+      npm)
+        $debug npm install -g "${line[@]}";;
       *)
         ;;
     esac
@@ -178,16 +171,16 @@ function process() {
 # Get list of installed packages
 function get_installed() {
   case "$1" in
-    'brew tap')
-      brew tap | sort -u;;
     'brew cask')
       brew cask list | sort -u;;
+    'brew tap')
+      brew tap | sort -u;;
     'brew leaves'|'brew php')
       brew list | sort -u;;
-    npm)
-      qte npm -g list | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u;;
     gem)
       $1 list | sed 's/ .*$//' | sort -u;;
+    npm)
+      qte npm -g list | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u;;
     *)
       echo;;
   esac
