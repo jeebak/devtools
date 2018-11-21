@@ -69,12 +69,12 @@ trap clean_up EXIT INT QUIT TERM
 if [[ $OSTYPE == darwin* ]]; then
   OSX_VERSION="$(sw_vers -productVersion)"
 
-  if [[ ! "$OSX_VERSION" =~ 10.1[01234] ]]; then
+  if [[ ! "$OSX_VERSION" =~ 10.1[1234] ]]; then
     get_conf "system-requirement"
     exit 127
   fi
 else
-  die "Oops! This script was only meant for Mac OS X" 127
+  die "Oops! This script is not compatibile with or tested for your OS" 127
 fi
 # -----------------------------------------------------------------------------
 # Strip out comments, beginning and trailing whitespace, [ :].*$, and blank lines
@@ -275,7 +275,6 @@ read -r -p "Hit [enter] to start or control-c to quit: " dummy
 caffeinate -d -i -t 3600 &
 # -- VERSION CONTROL /etc -----------------------------------------------------
 # We should have git available now, after installing Xcode cli tools
-
 if [[ ! -f /etc/.git/config ]]; then
   show_status "Git init-ing /etc [you may be prompted for sudo password]: "
   sudo -H bash -c "
@@ -307,37 +306,6 @@ if ! qt command -v brew; then
 
   # TODO: test for errors
   brew doctor
-else
-  # There was a major(?) architecture change to homebrew around 2015-12(?)
-  if ! brew --version | qt grep "Homebrew [>]*[^0]"; then
-    die "Hmm... Old version of brew detected. You may want to run: brew update; brew upgrade; and re-run this script when done" 127
-  fi
-
-  BREW_PREFIX="$(brew --prefix)"
-  export BREW_PREFIX
-
-  # https://brew.sh/2018/01/19/homebrew-1.5.0/
-  currentBrewVersion="$(brew --version | grep -E -o '[0-9]+\.[0-9]+')"
-
-  if [[ "$(echo -e "$currentBrewVersion\\n1.4" | sort -t '.' -k 1,1 -k 2,2 -g | tail -1)" = '1.4' ]]; then
-    errcho "In brew version 1.5 (http://bit.ly/2q9wcoI / http://bit.ly/2qcXiem) the php tap has been archived."
-    die "This script will no longer support the older version" 127
-  else
-    if brew list | qt grep -E -e '^php[57]'; then
-      show_status "Found old packages from the homebrew/php tap. Deleting"
-      brew list | grep -E -e '^php[57]' | xargs brew rm --force --ignore-dependencies
-      # TODO: during a test run, 'brew rm php56' failed, due to
-      # $BREW_PREFIX/Cellar/php@5.6/5.6.35/var being owned by root. It seems
-      # isolated to one laptop, since the ownership was correct on another
-      # laptop.
-    fi
-
-    if brew tap  | qt grep -E homebrew/php; then
-      show_status "Found old homebrew/php tap. Deleting"
-      brew untap homebrew/php
-    fi
-    [[ -d "$BREW_PREFIX/etc/php" ]] && find "$BREW_PREFIX/etc/php" -name ext-mcrypt.ini -delete
-  fi
 fi
 
 BREW_PREFIX="$(brew --prefix)"
@@ -473,18 +441,6 @@ PHP_FPM_PROXY="fcgi://localhost/"
 
 [[ ! -d "$BREW_PREFIX/var/run" ]] && mkdir -p "$BREW_PREFIX/var/run"
 
-if [[ -f "$APACHE_BASE/extra/dev.conf" ]]; then
-  etc_git_commit "git rm apache2/extra/dev.conf" "Remove apache2/extra/dev.conf"
-fi
-
-if qt grep '^# Local vhost and ssl, for \*.dev$'                        "$HTTPD_CONF"; then
-  sudo sed -i.bak '/^# Local vhost and ssl, for \*.dev$/d'              "$HTTPD_CONF"
-  sudo sed -i.bak '/Include \/private\/etc\/apache2\/extra\/dev.conf/d' "$HTTPD_CONF"
-  sudo rm "${HTTPD_CONF}.bak"
-
-  etc_git_commit "git add $HTTPD_CONF" "Remove references to .dev from $HTTPD_CONF"
-fi
-
 if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]] || ! qt grep "$PHP_FPM_HANDLER" "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.localhost\\.metaltoad-sites\\.com "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.xip\\.io "$APACHE_BASE/extra/localhost.conf"; then
   get_conf "localhost.conf" | qt sudo tee "$APACHE_BASE/extra/localhost.conf"
 
@@ -569,10 +525,6 @@ if git status | qt grep -E 'resolver/localhost|homebrew/etc/dnsmasq.conf'; then
   etc_git_commit "git add resolver/localhost homebrew/etc/dnsmasq.conf" "Add dnsmasq files"
 fi
 qt popd
-
-if [[ -f /etc/resolver/dev ]]; then
-  etc_git_commit "git rm resolver/dev" "Remove /etc/resolver/dev"
-fi
 
 if ! qt grep -i dnsmasq /etc/hosts; then
   cat <<EOT | qt sudo tee -a /etc/hosts
@@ -817,7 +769,6 @@ jshint
 # Start: system-requirement
 cat <<EOT
 Sorry! This script is currently only compatible with:
-  Yosemite    (10.10*)
   El Capitan  (10.11*)
   Sierra      (10.12*)
   High Sierra (10.13*)
@@ -834,8 +785,8 @@ cat <<EOT
 
 OK. It looks like we're ready to go.
 *******************************************************************************
-***** NOTE: This script assumes a "pristine" installation of Yosemite,    *****
-***** El Capitan, or Sierra. If you've already made changes to files in   *****
+***** NOTE: This script assumes a "pristine" installation of El Capitan,  *****
+***** [High] Sierra, or Mojave If you've already made changes to files in *****
 ***** /etc, then all bets are off. You have been WARNED!                  *****
 *******************************************************************************
 If you wish to continue, then this is what I'll be doing:
