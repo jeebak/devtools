@@ -95,6 +95,8 @@ function process() {
     [[ -z "$line" ]] && continue
     show_status "($1) $line"
     case "$1" in
+      'apt-get')
+        $debug sudo apt-get install -y "${line[@]}";;
       'brew tap')
         $debug brew tap "${line[@]}";;
       'brew cask')
@@ -158,6 +160,8 @@ function process() {
           done 4< <(get_pkgs "pecl")
         fi
         ;;
+      'dnf')
+        $debug sudo dnf -y install "${line[@]}";;
       gem)
         # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
         if qt command -v csrutil && csrutil status | qt grep enabled; then
@@ -168,6 +172,8 @@ function process() {
         $debug gem install -f "${extra[@]}" "${line[@]}";;
       npm)
         $debug npm install -g "${line[@]}";;
+      'pacman')
+        $debug sudo pacman -S --noconfirm "${line[@]}";;
       *)
         ;;
     esac
@@ -179,16 +185,22 @@ function process() {
 # Get list of installed packages
 function get_installed() {
   case "$1" in
+    'apt-get')
+      qte apt list --installed | sed 's;/.*$;;' | sort -u;;
     'brew cask')
       brew cask list | sort -u;;
     'brew tap')
       brew tap | sort -u;;
     'brew leaves'|'brew php')
       brew list | sort -u;;
+    'dnf')
+      qte dnf list installed | sed 's/\..*$//' | sort -u;;
     gem)
       $1 list | sed 's/ .*$//' | sort -u;;
     npm)
       qte npm -g list | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u;;
+    'pacman')
+      qte pacman -Qn | sed 's/ .*$//' | sort -u;;
     *)
       echo;;
   esac
@@ -304,13 +316,13 @@ echo "== Processing Homebrew =="
 if ! qt command -v brew; then
   /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
   qt hash
-
-  # TODO: test for errors
-  brew doctor
 fi
 
 BREW_PREFIX="$(brew --prefix)"
 export BREW_PREFIX
+
+# TODO: test for errors
+brew doctor || true
 
 show_status "brew tap"
 process "brew tap"
@@ -752,6 +764,9 @@ pngcrush
 the_silver_searcher
 wp-cli
 # End: brew leaves
+# -----------------------------------------------------------------------------
+# Start: pip
+# End: pip
 # -----------------------------------------------------------------------------
 # Start: gem
 bundler
