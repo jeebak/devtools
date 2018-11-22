@@ -34,7 +34,12 @@ function is_mac() {
 }
 
 function is_linux() {
-  [[ $OSTYPE == linux-gnu ]]
+  # Usually linux-gnu, but OpenSuse is linux
+  [[ $OSTYPE == linux* ]]
+}
+
+function is_mageia() {
+  [[ -f /etc/lsb-release ]] && qt grep -i mageia /etc/lsb-release
 }
 # -- CHECKS RUNNING IN BASH ---------------------------------------------------
 INVOKED_AS="$(basename "$BASH")"
@@ -85,16 +90,18 @@ if is_mac; then
   OSX_VERSION="$(sw_vers -productVersion)"
 
   if [[ ! "$OSX_VERSION" =~ 10.1[1234] ]]; then
-    get_conf "system-requirement"
+    get_conf "system-requirement-mac"
     exit 127
   fi
 elif is_linux; then
+  # openSUSE has both zypper and apt-get
+  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v zypper)")"
   [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v apt-get)")"
   [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v dnf)")"
   [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v pacman)")"
 
   if [[ -z "$pkg_manager" ]]; then
-    get_conf "system-requirement"
+    get_conf "system-requirement-linux"
     exit 127
   fi
 else
@@ -120,15 +127,19 @@ function process() {
     show_status "($1) $line"
     case "$1" in
       'apt-get')
-        $debug sudo apt-get install -y "${line[@]}";;
+        $debug sudo apt-get install -y "${line[@]}"
+        ;;
       'brew tap')
-        $debug brew tap "${line[@]}";;
+        $debug brew tap "${line[@]}"
+        ;;
       'brew cask')
-        $debug brew cask install "${line[@]}";;
-      'brew build-essential'|'brew leaves')
+        $debug brew cask install "${line[@]}"
+        ;;
+      'brew build-essential'|'brew leaves'*)
         # Quick hack to allow for extra --args
         line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
-        $debug brew install "${line[@]}";;
+        $debug brew install "${line[@]}"
+        ;;
       'brew php')
         [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
 
@@ -190,8 +201,9 @@ function process() {
         fi
         ;;
       'dnf')
-        $debug sudo dnf -y install "${line[@]}";;
-      gem)
+        $debug sudo dnf -y install "${line[@]}"
+        ;;
+      'gem')
         if is_mac; then
           # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
           if qt command -v csrutil && csrutil status | qt grep enabled; then
@@ -199,15 +211,21 @@ function process() {
           fi
 
           line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
-          $debug gem install -f "${extra[@]}" "${line[@]}";;
+          $debug gem install -f "${extra[@]}" "${line[@]}"
         elif is_linux; then
           line=( $(grep -E "^$line[ ]*.*$" <(get_pkgs "$1")) )
-          $debug gem install -f "${line[@]}";;
+          $debug gem install -f "${line[@]}"
         fi
-      npm)
-        $debug npm install -g "${line[@]}";;
+        ;;
+      'npm')
+        $debug npm install -g "${line[@]}"
+        ;;
       'pacman')
-        $debug sudo pacman -S --noconfirm "${line[@]}";;
+        $debug sudo pacman -S --noconfirm "${line[@]}"
+        ;;
+      'zypper')
+        $debug sudo zypper install -y "${line[@]}"
+        ;;
       *)
         ;;
     esac
@@ -220,23 +238,35 @@ function process() {
 function get_installed() {
   case "$1" in
     'apt-get')
-      qte apt list --installed | sed 's;/.*$;;' | sort -u;;
+      qte apt list --installed | sed 's;/.*$;;' | sort -u
+      ;;
     'brew cask')
-      brew cask list | sort -u;;
+      brew cask list | sort -u
+      ;;
     'brew tap')
-      brew tap | sort -u;;
-    'brew build-essential'|'brew leaves'|'brew php')
-      brew list | sort -u;;
+      brew tap | sort -u
+      ;;
+    'brew build-essential'|'brew leaves'*|'brew php')
+      brew list | sort -u
+      ;;
     'dnf')
-      qte dnf list installed | sed 's/\..*$//' | sort -u;;
-    gem)
-      $1 list | sed 's/ .*$//' | sort -u;;
-    npm)
-      qte npm -g list | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u;;
+      qte dnf list installed | sed 's/\..*$//' | sort -u
+      ;;
+    'gem')
+      $1 list | sed 's/ .*$//' | sort -u
+      ;;
+    'npm')
+      qte npm -g list | iconv -c -f utf-8 -t ascii | grep -v -e '^/' -e '^  ' | sed 's/@.*$//;/^$/d;s/ //g' | sort -u
+      ;;
     'pacman')
-      qte pacman -Qn | sed 's/ .*$//' | sort -u;;
+      qte pacman -Qn | sed 's/ .*$//' | sort -u
+      ;;
+    'zypper')
+      qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | sort -u
+      ;;
     *)
-      echo;;
+      echo
+      ;;
   esac
 }
 
@@ -252,11 +282,13 @@ function show_status() {
 
 # Git commit /etc changes via sudo
 function etc_git_commit() {
-  local msg
+  local msg vcs
+
+  vcs="$(basename "$(command -v etckeeper || echo git)")"
 
   msg="$2"
-  show_status "Committing to git"
-  sudo -H bash -c " cd /etc/ ; $1 ; git commit -m '[Slipstream] $msg' "
+  show_status "Committing to $vcs"
+  sudo -H bash -c " cd /etc/ ; $1 ; $vcs commit -m '[Slipstream] $msg' "
 }
 
 # Generate self-signed SSL
@@ -314,7 +346,7 @@ if is_mac; then
   fi
 fi
 # -- OVERVIEW OF CHANGES THAT WILL BE MADE ------------------------------------
-get_conf "all-systems-go"
+get_conf "all-systems-go-$(is_mac && echo mac; is_linux && echo linux)"
 
 # shellcheck disable=SC2034
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
@@ -334,18 +366,28 @@ if [[ ! -f /etc/.git/config ]]; then
       'apt-get')
         sudo apt-get update
         # apt-cache depends etckeeper
-        sudo apt-get install -y etckeeper;;
+        sudo apt-get install -y etckeeper
+        ;;
       'dnf')
         # Mageia has neither sudo nor git in base installation
         # TODO: what to do if wrong password's entered for "su"?
         qt command -v sudo || su -c 'dnf -y install sudo'; qt hash
         qt command -v git  || sudo   dnf -y install git;   qt hash
-        sudo dnf -y install etckeeper
-        sudo etckeeper init;;
+        # Quick+dirty hack :/
+        if ! is_mageia; then
+          sudo dnf -y install etckeeper
+          sudo etckeeper init
+        fi
+        ;;
       'pacman')
         sudo pacman -Syy --noconfirm # The -Syu seems to do entire system upgrade
         sudo pacman -S --noconfirm etckeeper
-        sudo etckeeper init;;
+        sudo etckeeper init
+        ;;
+      'zypper')
+        # Took forever: sudo zypper update -y
+        sudo zypper install -y etckeeper
+        ;;
     esac
 
     qt hash
@@ -355,8 +397,8 @@ if [[ ! -f /etc/.git/config ]]; then
 [[ -z '$(git config --get user.name)'  ]] && git config --global user.name 'System Administrator'
 [[ -z '$(git config --get user.email)' ]] && git config --global user.email '$USER@localhost'"
 
-  if is_mac; then
-    etc_git_commit "git init"
+  if ! qt command -v etckeeper; then
+    etc_git_commit "git init" || true
     etc_git_commit "git add ." "Initial commit"
   fi
 fi
@@ -394,11 +436,12 @@ elif is_linux; then
   if ! qt sudo test -e /etc/sudoers.d/10-local-users; then
     [[ ! -d /etc/sudoers.d ]] && sudo mkdir -p /etc/sudoers.d
     cat <<EOT | qt sudo tee /etc/sudoers.d/10-local-users
-  # User rules for $USER
-  $USER ALL=(ALL) NOPASSWD:ALL
+# User rules for $USER
+$USER ALL=(ALL) NOPASSWD:ALL
 EOT
-
-    etc_git_commit "chmod 640 /etc/sudoers.d/10-local-users" "Password-less sudo for '$USER'"
+    sudo chmod 640 /etc/sudoers.d/10-local-users
+    etc_git_commit "git add /etc/sudoers.d/10-local-users" "Password-less sudo for '$USER'"
+  fi
 fi
 # -- HOMEBREW -----------------------------------------------------------------
 echo "== Processing Homebrew =="
@@ -440,6 +483,16 @@ process "brew php"
 
 show_status "brew leaves"
 process "brew leaves"
+
+if is_mac; then
+  show_status "brew leaves-mac"
+  process "brew leaves-mac"
+fi
+
+if is_linux; then
+  show_status "brew leaves-linux"
+  process "brew leaves-linux"
+fi
 # -- INSTALL PYTHON / PIPS ----------------------------------------------------
 echo "== Processing Pip =="
 
@@ -502,15 +555,23 @@ if is_linux; then
         sudo debconf-set-selections <<< "postfix postfix/mailname string $(hostname)"
         sudo debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
         sudo apt-get install -y bsd-mailx postfix
-      fi;;
+      fi
+      ;;
     'dnf')
       if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
         sudo dnf -y install mailx postfix
-      fi;;
+      fi
+      ;;
     'pacman')
       if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
         sudo pacman -S --noconfirm postfix
-      fi;;
+      fi
+      ;;
+    'zypper')
+      if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
+        sudo zypper install -y mailx postfix
+      fi
+      ;;
   esac
 fi
 
@@ -537,29 +598,20 @@ qt popd
 # -- INSTALL MARIADB (MYSQL) --------------------------------------------------
 echo "== Processing MariaDB =="
 
-# brew info mariadb
-[[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
-if qt ls "$BREW_PREFIX/opt/mariadb/"*.plist && ! qt ls ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist; then
-  show_status "Linking MariaDB LaunchAgent plist"
-  ln -sfv "$BREW_PREFIX/opt/mariadb/"*.plist ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist
+[[ ! -d "$BREW_PREFIX/etc/my.cnf.d" ]] && mkdir -p "$BREW_PREFIX/etc/my.cnf.d"
+if [[ ! -f "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf" ]]; then
+  show_status           "Creating: $BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
+  get_conf "mysqld_innodb.cnf" >  "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
 fi
 
-[[ ! -d /etc/homebrew/etc/my.cnf.d ]] && sudo mkdir -p /etc/homebrew/etc/my.cnf.d
-if [[ ! -f /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf ]]; then
-  show_status "Creating: /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf"
-  get_conf "mysqld_innodb.cnf" | qt sudo tee /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
-
-  show_status "Linking to: $BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
-  ln -svf /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
-  etc_git_commit "git add homebrew" "Add homebrew/etc/my.cnf.d/mysqld_innodb.cnf"
-fi
-
-# TOOO: ps aux | grep mariadb and prehaps use nc to test if port is open
-# brew info mariadb
-if ! qt launchctl list homebrew.mxcl.mariadb; then
-  show_status "Loading: ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist"
-  launchctl load ~/Library/LaunchAgents/homebrew.mxcl.mariadb.plist
-
+# Start MariaDB
+if ! qt mysql.server status; then
+  if is_mac; then
+    brew services start mariadb
+  elif is_linux; then
+    # TODO: figure out how to start automatically
+    (qt mysql.server start &)
+  fi
   show_status "Setting mysql root password... waiting for mysqld to start"
   # Just sleep, waiting for mariadb to start
   sleep 7
@@ -569,9 +621,10 @@ fi
 echo "== Processing Apache =="
 
 APACHE_BASE="/etc/apache2"
-HTTPD_CONF="$APACHE_BASE/httpd.conf"
 is_linux && APACHE_BASE="$BREW_PREFIX/etc/httpd"
+HTTPD_CONF="$APACHE_BASE/httpd.conf"
 
+SUDO_ON_MAC="$(is_mac && echo sudo || true)"
 show_status "Updating httpd.conf settings"
 for i in \
   'LoadModule socache_shmcb_module ' \
@@ -583,12 +636,12 @@ for i in \
   'LoadModule proxy_fcgi_module ' \
   'LoadModule proxy_module ' \
 ; do
-  sudo sed -i.bak "s;#.*${i}\\(.*\\);${i}\\1;"  "$HTTPD_CONF"
+  $SUDO_ON_MAC sed -i.bak "s;#.*${i}\\(.*\\);${i}\\1;"  "$HTTPD_CONF"
 done
 
-sudo sed -i.bak "s;^Listen 80.*$;Listen 80;"    "$HTTPD_CONF"
-sudo sed -i.bak "s;^User .*$;User $USER;"       "$HTTPD_CONF"
-sudo sed -i.bak "s;^Group .*$;Group $(id -gn);" "$HTTPD_CONF"
+$SUDO_ON_MAC sed -i.bak "s;^Listen 80.*$;Listen 80;"    "$HTTPD_CONF"
+$SUDO_ON_MAC sed -i.bak "s;^User .*$;User $USER;"       "$HTTPD_CONF"
+$SUDO_ON_MAC sed -i.bak "s;^Group .*$;Group $(id -gn);" "$HTTPD_CONF"
 
 DEST_DIR="/Users/$USER/Sites"
 
@@ -601,11 +654,13 @@ if [[ ! -d "$APACHE_BASE/ssl" ]]; then
   qt pushd "$$/ssl"
   genssl
   qt popd
-  sudo mv "$$/ssl" "$APACHE_BASE"
-  sudo chown -R root:wheel "$APACHE_BASE/ssl"
+  $SUDO_ON_MAC mv "$$/ssl" "$APACHE_BASE"
   rmdir "$$"
 
-  etc_git_commit "git add apache2/ssl" "Add apache2/ssl files"
+  if is_mac; then
+    sudo chown -R root:wheel "$APACHE_BASE/ssl"
+    etc_git_commit "git add apache2/ssl" "Add apache2/ssl files"
+  fi
 fi
 
 # Set a default value, if not set as an env
@@ -624,7 +679,7 @@ PHP_FPM_PROXY="fcgi://localhost/"
 [[ ! -d "$BREW_PREFIX/var/run" ]] && mkdir -p "$BREW_PREFIX/var/run"
 
 if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]] || ! qt grep "$PHP_FPM_HANDLER" "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.localhost\\.metaltoad-sites\\.com "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.xip\\.io "$APACHE_BASE/extra/localhost.conf"; then
-  get_conf "localhost.conf" | qt sudo tee "$APACHE_BASE/extra/localhost.conf"
+  get_conf "localhost.conf" | qt $SUDO_ON_MAC tee "$APACHE_BASE/extra/localhost.conf"
 
   if ! qt grep '^# Local vhost and ssl, for \*.localhost$' "$HTTPD_CONF"; then
     cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
@@ -634,18 +689,19 @@ Include $APACHE_BASE/extra/localhost.conf
 EOT
   fi
 
-  etc_git_commit "git add apache2/extra/localhost.conf" "Add apache2/extra/localhost.conf"
+  is_mac && etc_git_commit "git add apache2/extra/localhost.conf" "Add apache2/extra/localhost.conf"
 else
   if qt grep ' ProxySet connectiontimeout=5 timeout=240$' "$APACHE_BASE/extra/localhost.conf"; then
-    sudo sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' "$APACHE_BASE/extra/localhost.conf"
-    sudo rm "$APACHE_BASE/extra/localhost.conf.bak"
+    show_status "Update httpd/extra/localhost.conf ProxySet timeout value to 1800"
+    $SUDO_ON_MAC sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' "$APACHE_BASE/extra/localhost.conf"
+    $SUDO_ON_MAC rm "$APACHE_BASE/extra/localhost.conf.bak"
 
-    etc_git_commit "git add apache2/extra/localhost.conf" "Update apache2/extra/localhost.conf ProxySet timeout value to 1800"
+    is_mac && etc_git_commit "git add apache2/extra/localhost.conf" "Update apache2/extra/localhost.conf ProxySet timeout value to 1800"
   fi
 fi
 
 if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' "$HTTPD_CONF"; then
-  cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
+  cat <<EOT | qt $SUDO_ON_MAC tee -a "$HTTPD_CONF"
 
 # To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)
 Timeout 1800
@@ -653,60 +709,71 @@ EOT
 fi
 
 # Have ServerName match CN in SSL Cert
-sudo sed -i.bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
-if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
-  echo "No change made to: apache2/httpd.conf"
-else
-  etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf"
+$SUDO_ON_MAC sed -i.bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
+if is_mac; then
+  if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
+    echo "No change made to: apache2/httpd.conf"
+  else
+    etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf"
+  fi
 fi
-sudo rm "${HTTPD_CONF}.bak"
+$SUDO_ON_MAC rm "${HTTPD_CONF}.bak"
 
 # https://clickontyler.com/support/a/38/how-start-apache-automatically/
-
-if ! qt sudo launchctl list org.apache.httpd; then
+if is_mac && ! qt sudo launchctl list org.apache.httpd; then
   show_status "Loading: /System/Library/LaunchDaemons/org.apache.httpd.plist"
   sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist
 fi
+# TODO: automatically start apache, for linux
 # -- WILDCARD DNS -------------------------------------------------------------
 echo "== Processing Dnsmasq =="
 
-# dnsmasq (add note to /etc/hosts)
-#  add symlinks as non-root to $BREW_PREFIX/etc files
-
-if qt ls "$BREW_PREFIX/opt/dnsmasq/"*.plist && ! qt ls /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist; then
-  show_status "Linking Dnsmasq LaunchAgent plist"
-  # brew info dnsmasq
-  sudo cp -fv "$BREW_PREFIX/opt/dnsmasq/"*.plist /Library/LaunchDaemons
-  sudo chown root /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
-fi
-
-if [[ ! -f /etc/homebrew/etc/dnsmasq.conf ]] || qt grep '^address=/.dev/127.0.0.1$' /etc/homebrew/etc/dnsmasq.conf; then
-  show_status "Creating: /etc/homebrew/etc/dnsmasq.conf"
-  cat <<EOT | qt sudo tee /etc/homebrew/etc/dnsmasq.conf
+conffile="$BREW_PREFIX/etc/dnsmasq.conf"
+is_linux && conffile="/etc/NetworkManager/dnsmasq.d/10-slipstream.conf"
+if [[ ! -f "$conffile" ]] || ! qt grep -E '^address=/.localhost/127.0.0.1$' "$conffile"; then
+  show_status "Updating: $conffile"
+  [[ ! -d "${conffile%/*}" ]] && $SUDO_ON_MAC mkdir -p "${conffile%/*}"
+  cat <<EOT | qt sudo tee -a "$conffile"
 address=/.localhost/127.0.0.1
 EOT
-  show_status "Linking to: $BREW_PREFIX/etc/dnsmasq.conf"
-  ln -svf /etc/homebrew/etc/dnsmasq.conf "$BREW_PREFIX/etc/dnsmasq.conf"
+
+  if is_linux; then
+    etc_git_commit "git add $conffile" "Updating $conffile"
+    # TODO: Mint: "Failed to restart dnsmasq.service: Unit dnsmasq.service not found."
+    qt sudo systemctl restart dnsmasq || true
+  fi
 fi
 
-[[ ! -d /etc/resolver ]] && sudo mkdir /etc/resolver
-if [[ ! -f /etc/resolver/localhost ]]; then
-  cat <<EOT | qt sudo tee /etc/resolver/localhost
+if is_mac; then
+  [[ ! -d /etc/resolver ]] && sudo mkdir /etc/resolver
+  if [[ ! -f /etc/resolver/localhost ]]; then
+    cat <<EOT | qt sudo tee /etc/resolver/localhost
 nameserver 127.0.0.1
 EOT
+  fi
+
+  show_status "Starting: sudo brew services start dnsmasq"
+  sudo brew services start dnsmasq
 fi
 
-# brew info dnsmasq
-if ! qt sudo launchctl list homebrew.mxcl.dnsmasq; then
-  show_status "Loading: /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist"
-  sudo launchctl load /Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist
-fi
+if is_linux; then
+  conffile="/etc/NetworkManager/NetworkManager.conf"
+  # TODO: should really test for "[main]" and "dns=dnsmasq"
+  if [[ ! -f "$conffile" ]] || ! qt grep -E -e '^dns=dnsmasq$' "$conffile"; then
+    show_status "Updating: $conffile"
+    [[ ! -d "${conffile%/*}" ]] && sudo mkdir -p "${conffile%/*}"
+    cat <<EOT | qt sudo tee -a "$conffile"
+[main]
+dns=dnsmasq
+EOT
 
-qt pushd /etc/
-if git status | qt grep -E 'resolver/localhost|homebrew/etc/dnsmasq.conf'; then
-  etc_git_commit "git add resolver/localhost homebrew/etc/dnsmasq.conf" "Add dnsmasq files"
+    etc_git_commit "git add $conffile" "Updating $conffile"
+    # TODO: Mint: "Failed to restart dnsmasq.service: Unit dnsmasq.service not found."
+    qt sudo systemctl restart dnsmasq || true
+    # TODO: Mageia: Failed to restart NetworkManager.service: Unit NetworkManager.service not found.
+    qt sudo systemctl restart NetworkManager || true
+  fi
 fi
-qt popd
 
 if ! qt grep -i dnsmasq /etc/hosts; then
   cat <<EOT | qt sudo tee -a /etc/hosts
@@ -720,7 +787,9 @@ fi
 # -- SETUP BREW PHP / PHP.INI / XDEBUG ----------------------------------------
 echo "== Processing Brew PHP / php.ini / Xdebug =="
 
-[[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
+if is_mac; then
+  [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
+fi
 
 ini_settings=(
   "date.timezone = America/Los_Angeles"
@@ -786,35 +855,41 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
   fi
 done
 
-if [[ -d "/etc/homebrew/$APACHE_BASE" ]]; then
-  show_status "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
-  sudo rm -rf "/etc/homebrew/$APACHE_BASE"
-  etc_git_commit "git rm -r homebrew/$APACHE_BASE" "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
+if is_mac; then
+  if [[ -d "/etc/homebrew/$APACHE_BASE" ]]; then
+    show_status "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
+    sudo rm -rf "/etc/homebrew/$APACHE_BASE"
+    etc_git_commit "git rm -r homebrew/$APACHE_BASE" "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
+  fi
+
+  if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
+    rm -rf "$BREW_PREFIX/var/run/apache2"
+  fi
+
+  # Account for both newly and previously provisioned scenarios
+  sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                         "$HTTPD_CONF"
+  sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;"  "$HTTPD_CONF"
+  sudo sed -i.bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                      "$HTTPD_CONF"
+  sudo rm "${HTTPD_CONF}.bak"
+
+  qt pushd /etc/
+  if git status | qt grep -E 'apache2/httpd.conf'; then
+    etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf to use brew php-fpm"
+  fi
+  qt popd
+
+  while read -r -u3 service && [[ ! -z "$service" ]]; do
+    qte brew services stop "$service"
+  done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' started ' | cut -f1 -d' ')
 fi
 
-if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
-  rm -rf "$BREW_PREFIX/var/run/apache2"
-fi
-
-# Account for both newly and previously provisioned scenarios
-sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                         "$HTTPD_CONF"
-sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;"  "$HTTPD_CONF"
-sudo sed -i.bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                      "$HTTPD_CONF"
-sudo rm "${HTTPD_CONF}.bak"
-
-qt pushd /etc/
-if git status | qt grep -E 'apache2/httpd.conf'; then
-  etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf to use brew php-fpm"
-fi
-qt popd
-
-while read -r -u3 service && [[ ! -z "$service" ]]; do
-  qte brew services stop "$service"
-done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' started ' | cut -f1 -d' ')
-
-# Make php@7.1 the default
 [[ ! -d "$BREW_PREFIX/var/log/" ]] && mkdir -p "$BREW_PREFIX/var/log/"
-brew services start php@7.1
+# Make php@7.1 the default
+if is_mac; then
+  brew services start php@7.1
+elif is_linux; then
+  qte killall php-fpm || true
+fi
 
 brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]* || true)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
@@ -822,20 +897,27 @@ if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite --force php@7.1
 fi
 
-# Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
-# keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
-#   http://apple.stackexchange.com/questions/211015/el-capitan-apache-error-message-ah00526
-# This simple commenting out of the line seems to work just fine.
-sudo sed -i.bak 's;^\(LockFile\);# \1;' "$APACHE_BASE/extra/httpd-mpm.conf"
-sudo rm -f "$APACHE_BASE/extra/httpd-mpm.conf.bak"
+if is_mac; then
+  # Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
+  # keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
+  #   http://apple.stackexchange.com/questions/211015/el-capitan-apache-error-message-ah00526
+  # This simple commenting out of the line seems to work just fine.
+  sudo sed -i.bak 's;^\(LockFile\);# \1;' "$APACHE_BASE/extra/httpd-mpm.conf"
+  sudo rm -f "$APACHE_BASE/extra/httpd-mpm.conf.bak"
 
-qt pushd /etc/
-if git status | qt grep 'apache2/extra/httpd-mpm.conf'; then
-  etc_git_commit "git add apache2/extra/httpd-mpm.conf" "Comment out LockFile in apache2/extra/httpd-mpm.conf"
+  qt pushd /etc/
+  if git status | qt grep 'apache2/extra/httpd-mpm.conf'; then
+    etc_git_commit "git add apache2/extra/httpd-mpm.conf" "Comment out LockFile in apache2/extra/httpd-mpm.conf"
+  fi
+  qt popd
+
+  sudo apachectl -k restart
+elif is_linux; then
+  ("$BREW_PREFIX/sbin/php-fpm" &)
+  [[ ! -d "/var/log/apache2/" ]] && { sudo mkdir "/var/log/apache2/"; sudo chown "$USER:$(id -ng)" "/var/log/apache2/"; }
+  sudo "$(brew --prefix)"/bin/apachectl -k restart
 fi
-qt popd
 
-sudo apachectl -k restart
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
 show_status "Setting up adminer"
@@ -856,7 +938,7 @@ fi
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
 [[ ! -d "$DEST_DIR/slipstream/webroot" ]] && mkdir -p "$DEST_DIR/slipstream/webroot"
 get_conf "slipstream" > "$DEST_DIR/slipstream/webroot/index.php"
-open http://slipstream.localhost/
+"$(command -v xdg-open || command -v open)" http://slipstream.localhost/
 # -----------------------------------------------------------------------------
 # We're done! Now,...
 # clean_up (called automatically, since we're trap-ing EXIT signal)
@@ -897,6 +979,9 @@ jdk10-openjdk
 # For linuxbrew php
 libmemcached
 # End: pacman
+# -----------------------------------------------------------------------------
+# Start: zypper
+# End: zypper
 # -----------------------------------------------------------------------------
 # Start: brew build-essential
 binutils
@@ -953,14 +1038,11 @@ xdebug:php@5.6-2.5.5
 # -----------------------------------------------------------------------------
 # Start: brew leaves
 # Development Envs
-node
 # Database
 mariadb
 # Network
-dnsmasq
 sshuttle
 # Shell
-bash-completion
 bash-git-prompt
 # Utilities
 apachetop
@@ -971,6 +1053,21 @@ pngcrush
 the_silver_searcher
 wp-cli
 # End: brew leaves
+# -----------------------------------------------------------------------------
+# Start: brew leaves-mac
+# Development Envs
+node
+# Network
+dnsmasq
+# Shell
+bash-completion
+# End: brew leaves-mac
+# -----------------------------------------------------------------------------
+# Start: brew leaves-linux
+# Development Envs
+pyenv
+rbenv
+# End: brew leaves-linux
 # -----------------------------------------------------------------------------
 # Start: pip
 # End: pip
@@ -989,7 +1086,7 @@ js-beautify
 jshint
 # End: npm
 # -----------------------------------------------------------------------------
-# Start: system-requirement
+# Start: system-requirement-mac
 cat <<EOT
 Sorry! This script is currently only compatible with:
   El Capitan  (10.11*)
@@ -1001,9 +1098,46 @@ You're running:
 $(sw_vers)
 
 EOT
-# End: system-requirement
+# End: system-requirement-mac
 # -----------------------------------------------------------------------------
-# Start: all-systems-go
+# Start: system-requirement-linux
+cat <<EOT
+Sorry! This script is currently only compatible with:
+
+  apt-get based distributions, tested on:
+
+    Mint >= 19.1
+    Xubuntu >= 18.04
+
+  dnf based distributions, tested on:
+
+    Fedora >= 29
+    Mageia >= 6
+
+  pacman based distributions, tested on:
+
+    Antergos >= 18.11
+    Manjaro >= 18.0
+
+You're running:
+
+$(
+  if [[ -e /proc/version ]]; then
+    cat /proc/version
+  elif [[ -e /etc/issue ]]; then
+    cat /etc/issue
+  fi
+)
+
+EOT
+# WIP: openSUSE >= 42.3
+# Running into:
+#   cannot be installed as binary package and must be built from source.
+#   Install Clang or brew install gcc
+# chicken/egg issue w/ gcc / glibc
+# End: system-requirement-linux
+# -----------------------------------------------------------------------------
+# Start: all-systems-go-mac
 cat <<EOT
 
 OK. It looks like we're ready to go.
@@ -1027,7 +1161,34 @@ If you wish to continue, then this is what I'll be doing:
         *.localhost.metaltoad-sites.com, *.lvh.me, and *.vcap.me for localhost]
     - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
 EOT
-# End: all-systems-go
+# End: all-systems-go-mac
+# -----------------------------------------------------------------------------
+# Start: all-systems-go-linux
+cat <<EOT
+
+OK. It looks like we're ready to go.
+*******************************************************************************
+***** NOTE: This script assumes a "pristine" installation of Ubuntu,      *****
+***** If you've already made changes to files in /etc, then all bets      *****
+***** are off. You have been WARNED!                                      *****
+*******************************************************************************
+If you wish to continue, then this is what I'll be doing:
+  - Git-ifying your /etc folder with etckeeper
+  - Allow for password-less sudo by adding /etc/sudoers.d/10-local-users
+  - Install linux brew, and some brew packages
+  - Install Python  (via 'pyenv')             and install some pips
+  - Install Ruby    (via 'rbenv/ruby-build')  and install some gems
+  - Install NodeJs  (via 'n/n-install')       and install some npm packages
+  -- Configure:
+    - Postfix (Disable outgoing mail)
+    - MariaDB (InnoDB tweaks, etc.)
+    - Php.ini (Misc. configurations)
+    - Apache2 (Enable modules, and add wildcard vhost conf) [including
+      - ServerAlias for *.nip.io, *.xip.io for <anything>.<IP Address>.nip.io
+        *.localhost.metaltoad-sites.com, *.lvh.me, and *.vcap.me for localhost]
+    - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
+EOT
+# End: all-systems-go-linux
 # -----------------------------------------------------------------------------
 # Start: mysqld_innodb.cnf
 cat <<EOT
@@ -1079,7 +1240,9 @@ cat <<EOT
     DirectoryIndex index.html index.php
   </IfModule>
 
-  # Depends on: "LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so" in $HTTPD_CONF
+  # Depends on:
+  #   "LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so" in httpd.conf on mac, and
+  #   "LoadModule proxy_fcgi_module lib/httpd/modules/mod_proxy_fcgi.so" on linux
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
@@ -1123,7 +1286,9 @@ Listen 443
     DirectoryIndex index.html index.php
   </IfModule>
 
-  # Depends on: "LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so" in $HTTPD_CONF
+  # Depends on:
+  #   "LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so" in httpd.conf on mac, and
+  #   "LoadModule proxy_fcgi_module lib/httpd/modules/mod_proxy_fcgi.so" on linux
   #   http://serverfault.com/a/672969
   #   https://httpd.apache.org/docs/2.4/mod/mod_proxy_fcgi.html
   # This is to forward all PHP to php-fpm.
@@ -1215,7 +1380,7 @@ cat <<EOT
 <h4>These are the packages were installed</h4>
 <p>
   <strong>Brew:</strong>
-  $(clean <(get_pkgs "brew cask"))
+  $(is_mac && clean <(get_pkgs "brew cask"))
   $(clean <(get_pkgs "brew php"))
   $(clean <(get_pkgs "brew leaves"))
 </p>
