@@ -79,11 +79,21 @@ function clean_up() {
 }
 
 trap clean_up EXIT INT QUIT TERM
-# -- CHECK MAC AND VERSION ----------------------------------------------------
-if [[ $OSTYPE == darwin* ]]; then
+# -- CHECK OS VERSION ---------------------------------------------------------
+pkg_manager=""
+if is_mac; then
   OSX_VERSION="$(sw_vers -productVersion)"
 
   if [[ ! "$OSX_VERSION" =~ 10.1[1234] ]]; then
+    get_conf "system-requirement"
+    exit 127
+  fi
+elif is_linux; then
+  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v apt-get)")"
+  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v dnf)")"
+  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v pacman)")"
+
+  if [[ -z "$pkg_manager" ]]; then
     get_conf "system-requirement"
     exit 127
   fi
@@ -99,6 +109,8 @@ function clean() {
 # Process install
 function process() {
   local brew_php_linked debug extra line pecl_pkg num_ver
+
+  is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
   debug="$([[ ! -z "$DEBUG" ]] && echo echo || true)"
 
@@ -161,12 +173,17 @@ function process() {
                 qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
               else
                 pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
-                # TODO: better error handling
-                qt env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
-                    CFLAGS='-fgnu89-inline' \
-                    LDFLAGS='-fgnu89-inline' \
-                    CXXFLAGS='-fgnu89-inline' \
-                  "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+                if is_mac; then
+                  # TODO: better error handling
+                  qt env MACOSX_DEPLOYMENT_TARGET="$(sw_vers -productVersion | grep -E -o '^[0-9]+\.[0-9]+')" \
+                      CFLAGS='-fgnu89-inline' \
+                      LDFLAGS='-fgnu89-inline' \
+                      CXXFLAGS='-fgnu89-inline' \
+                    "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+                elif is_linux; then
+                  # TODO: better error handling
+                  qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+                fi
               fi
             fi
           done 4< <(get_pkgs "pecl")
@@ -175,13 +192,18 @@ function process() {
       'dnf')
         $debug sudo dnf -y install "${line[@]}";;
       gem)
-        # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
-        if qt command -v csrutil && csrutil status | qt grep enabled; then
-          extra=(-n $BREW_PREFIX/bin)
-        fi
+        if is_mac; then
+          # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
+          if qt command -v csrutil && csrutil status | qt grep enabled; then
+            extra=(-n $BREW_PREFIX/bin)
+          fi
 
-        line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
-        $debug gem install -f "${extra[@]}" "${line[@]}";;
+          line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
+          $debug gem install -f "${extra[@]}" "${line[@]}";;
+        elif is_linux; then
+          line=( $(grep -E "^$line[ ]*.*$" <(get_pkgs "$1")) )
+          $debug gem install -f "${line[@]}";;
+        fi
       npm)
         $debug npm install -g "${line[@]}";;
       'pacman')
@@ -306,31 +328,86 @@ fi
 # We should have git available now, after installing Xcode cli tools
 if [[ ! -f /etc/.git/config ]]; then
   show_status "Git init-ing /etc [you may be prompted for sudo password]: "
+
+  if is_linux; then
+    case "$pkg_manager" in
+      'apt-get')
+        sudo apt-get update
+        # apt-cache depends etckeeper
+        sudo apt-get install -y etckeeper;;
+      'dnf')
+        # Mageia has neither sudo nor git in base installation
+        # TODO: what to do if wrong password's entered for "su"?
+        qt command -v sudo || su -c 'dnf -y install sudo'; qt hash
+        qt command -v git  || sudo   dnf -y install git;   qt hash
+        sudo dnf -y install etckeeper
+        sudo etckeeper init;;
+      'pacman')
+        sudo pacman -Syy --noconfirm # The -Syu seems to do entire system upgrade
+        sudo pacman -S --noconfirm etckeeper
+        sudo etckeeper init;;
+    esac
+
+    qt hash
+  fi
+
   sudo -H bash -c "
 [[ -z '$(git config --get user.name)'  ]] && git config --global user.name 'System Administrator'
 [[ -z '$(git config --get user.email)' ]] && git config --global user.email '$USER@localhost'"
 
-  etc_git_commit "git init"
-  etc_git_commit "git add ." "Initial commit"
+  if is_mac; then
+    etc_git_commit "git init"
+    etc_git_commit "git add ." "Initial commit"
+  fi
+fi
+
+# -- PRIME THE PUMP -----------------------------------------------------------
+if is_linux; then
+  echo "== Processing $pkg_manager =="
+  show_status "$pkg_manager"
+  process "$pkg_manager"
+
+  qt hash
+
+  if [[ ! -L /Users ]]; then
+    show_status "Symlinking /home to /Users"
+    sudo ln -nfs /home /Users
+  fi
 fi
 # -- PASSWORDLESS SUDO --------------------------------------------------------
-if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
-  show_status "Making sudo password-less for 'admin' group"
-  sudo sed -i.bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
+echo "== Processing Sudo Password =="
 
-  if qt sudo diff /etc/sudoers /etc/sudoers.bak; then
-    echo "No change made to: /etc/sudoers"
-  else
-    etc_git_commit "git add sudoers" 'Password-less sudo for "admin" group'
+if is_mac; then
+  if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
+    show_status "Making sudo password-less for 'admin' group"
+    sudo sed -i.bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
+
+    if qt sudo diff /etc/sudoers /etc/sudoers.bak; then
+      echo "No change made to: /etc/sudoers"
+    else
+      etc_git_commit "git add sudoers" 'Password-less sudo for "admin" group'
+    fi
+
+    sudo rm -f /etc/sudoers.bak
   fi
+elif is_linux; then
+  if ! qt sudo test -e /etc/sudoers.d/10-local-users; then
+    [[ ! -d /etc/sudoers.d ]] && sudo mkdir -p /etc/sudoers.d
+    cat <<EOT | qt sudo tee /etc/sudoers.d/10-local-users
+  # User rules for $USER
+  $USER ALL=(ALL) NOPASSWD:ALL
+EOT
 
-  sudo rm -f /etc/sudoers.bak
+    etc_git_commit "chmod 640 /etc/sudoers.d/10-local-users" "Password-less sudo for '$USER'"
 fi
 # -- HOMEBREW -----------------------------------------------------------------
 echo "== Processing Homebrew =="
 
+is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+
 if ! qt command -v brew; then
-  /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  is_mac && /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  is_linux && sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
   qt hash
 fi
 
@@ -493,6 +570,7 @@ echo "== Processing Apache =="
 
 APACHE_BASE="/etc/apache2"
 HTTPD_CONF="$APACHE_BASE/httpd.conf"
+is_linux && APACHE_BASE="$BREW_PREFIX/etc/httpd"
 
 show_status "Updating httpd.conf settings"
 for i in \
@@ -854,6 +932,7 @@ vlc
 # -----------------------------------------------------------------------------
 # Start: brew php
 # Php 7.2 dropped mcrypt support. Previous versions now have it built in: php -m | grep mcrypt
+httpd
 php
 php@5.6
 php@7.0
