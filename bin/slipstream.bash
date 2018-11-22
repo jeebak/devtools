@@ -27,6 +27,15 @@ function qt() {
 function qte() {
   "$@" 2> /dev/null
 }
+
+# Misc
+function is_mac() {
+  [[ $OSTYPE == darwin* ]]
+}
+
+function is_linux() {
+  [[ $OSTYPE == linux-gnu ]]
+}
 # -- CHECKS RUNNING IN BASH ---------------------------------------------------
 INVOKED_AS="$(basename "$BASH")"
 if [[ -z "$INVOKED_AS" ]] || [[ "$INVOKED_AS" != 'bash' ]]; then
@@ -60,8 +69,11 @@ MYPID="$$"
 # Clean-up!
 function clean_up() {
   errcho "Cleaning up! Bye!"
-  # Kill all caffeinate processes that are children of this script
-  pkill -P $MYPID caffeinate
+
+  if is_mac; then
+    # Kill all caffeinate processes that are children of this script
+    pkill -P $MYPID caffeinate
+  fi
 
   exit
 }
@@ -101,7 +113,7 @@ function process() {
         $debug brew tap "${line[@]}";;
       'brew cask')
         $debug brew cask install "${line[@]}";;
-      'brew leaves')
+      'brew build-essential'|'brew leaves')
         # Quick hack to allow for extra --args
         line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
         $debug brew install "${line[@]}";;
@@ -191,7 +203,7 @@ function get_installed() {
       brew cask list | sort -u;;
     'brew tap')
       brew tap | sort -u;;
-    'brew leaves'|'brew php')
+    'brew build-essential'|'brew leaves'|'brew php')
       brew list | sort -u;;
     'dnf')
       qte dnf list installed | sed 's/\..*$//' | sort -u;;
@@ -270,12 +282,14 @@ function get_ini_sed_script() {
 }
 # -- CHECK AND INSTALL XCODE CLI TOOLS ----------------------------------------
 # .text
-if ! qt xcode-select -p; then
-  echo "You don't seem to have Xcode Command Line Tools installed"
-  # shellcheck disable=SC2034
-  read -r -p "Hit [enter] to start its installation. Re-run this script when done: " dummy
-  xcode-select --install
-  exit
+if is_mac; then
+  if ! qt xcode-select -p; then
+    echo "You don't seem to have Xcode Command Line Tools installed"
+    # shellcheck disable=SC2034
+    read -r -p "Hit [enter] to start its installation. Re-run this script when done: " dummy
+    xcode-select --install
+    exit
+  fi
 fi
 # -- OVERVIEW OF CHANGES THAT WILL BE MADE ------------------------------------
 get_conf "all-systems-go"
@@ -283,9 +297,11 @@ get_conf "all-systems-go"
 # shellcheck disable=SC2034
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
 # -- KEEP DISPLAY/SYSTEM FROM IDLING/SLEEPING ---------------------------------
-# Generously setting for an hour, but clean_up() will kill it upon exit or
-# interrupt
-caffeinate -d -i -t 3600 &
+if is_mac; then
+  # Generously setting for an hour, but clean_up() will kill it upon exit or
+  # interrupt
+  caffeinate -d -i -t 3600 &
+fi
 # -- VERSION CONTROL /etc -----------------------------------------------------
 # We should have git available now, after installing Xcode cli tools
 if [[ ! -f /etc/.git/config ]]; then
@@ -321,30 +337,105 @@ fi
 BREW_PREFIX="$(brew --prefix)"
 export BREW_PREFIX
 
+if is_linux; then
+  # brew doctor complains:
+  #   You should create these directories and change their ownership to your account.
+  sudo mkdir -p         "$BREW_PREFIX/var/homebrew/linked"
+  sudo chown -R "$USER" "$BREW_PREFIX/var/homebrew/linked"
+
+  show_status "brew build-essential"
+  process "brew build-essential"
+fi
+
 # TODO: test for errors
 brew doctor || true
 
-show_status "brew tap"
-process "brew tap"
+if is_mac; then
+  show_status "brew tap"
+  process "brew tap"
 
-show_status "brew cask"
-process "brew cask"
+  show_status "brew cask"
+  process "brew cask"
+fi
 
 show_status "brew php"
 process "brew php"
 
 show_status "brew leaves"
 process "brew leaves"
+# -- INSTALL PYTHON / PIPS ----------------------------------------------------
+echo "== Processing Pip =="
+
+if is_linux; then
+  export PATH="$PATH:$HOME/.pyenv/shims"
+  if [[ ! -x "$HOME/.pyenv/shims/python" ]]; then
+    qt hash
+    eval "$(pyenv init -)"
+    # Latest stable version
+    # Versions 2.7.* does not support OpenSSL1.1.0
+    pyenv install 3.7.1
+    pyenv global 3.7.1
+    qt hash
+  fi
+fi
+
+show_status "pip"
+process "pip"
 # -- INSTALL RUBY / GEMS ------------------------------------------------------
 echo "== Processing Gem =="
+
+if is_linux; then
+  export PATH="$PATH:$HOME/.rbenv/shims"
+  if [[ ! -x "$HOME/.rbenv/shims/ruby" ]]; then
+    qt hash
+    eval "$(rbenv init -)"
+    # Latest stable version
+    rbenv install 2.5.3
+    rbenv global 2.5.3
+    qt hash
+  fi
+fi
+
 show_status "gem"
 process "gem"
 # -- INSTALL NPM PACKAGES -----------------------------------------------------
 echo "== Processing Npm =="
+
+if is_linux; then
+  export N_PREFIX="$HOME/n"
+  export PATH="$HOME/n/bin:$PATH"
+  if [[ ! -x "$HOME/n/bin/node" ]]; then
+    # https://github.com/mklement0/n-install
+    curl -L https://git.io/n-install | bash -s -- -y
+    # Set  N_PREFIX since it's /usr/local under linux, and would require sudo
+    n lts
+  fi
+fi
+
 show_status "npm"
 process "npm"
 # -- DISABLE OUTGOING MAIL ----------------------------------------------------
 echo "== Processing Postfix =="
+
+if is_linux; then
+  # TODO: cleanup logic, and figure out configuration for dnf, and pacman
+  case "$pkg_manager" in
+    'apt-get')
+      if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
+        sudo debconf-set-selections <<< "postfix postfix/mailname string $(hostname)"
+        sudo debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
+        sudo apt-get install -y bsd-mailx postfix
+      fi;;
+    'dnf')
+      if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
+        sudo dnf -y install mailx postfix
+      fi;;
+    'pacman')
+      if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
+        sudo pacman -S --noconfirm postfix
+      fi;;
+  esac
+fi
 
 if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
   show_status "Disabling outgoing mail"
@@ -697,6 +788,43 @@ exit
 
 # -- LIST OF PACKAGES TO INSTALL ----------------------------------------------
 # .data
+# -----------------------------------------------------------------------------
+# Start: apt-get
+build-essential
+curl
+default-jdk
+git
+# For pyenv and/or rbenv
+libbz2-dev
+libffi-dev
+libsqlite3-dev
+libssl-dev
+zlib1g-dev
+# End: apt-get
+# -----------------------------------------------------------------------------
+# Start: dnf
+dnsmasq
+java-1.8.0-openjdk
+make
+# For pyenv and/or rbenv
+libffi-devel
+zlib-devel
+# End: dnf
+# -----------------------------------------------------------------------------
+# Start: pacman
+dnsmasq
+dnsutils
+git
+jdk10-openjdk
+# For linuxbrew php
+libmemcached
+# End: pacman
+# -----------------------------------------------------------------------------
+# Start: brew build-essential
+binutils
+gcc
+linux-headers
+# End: brew build-essential
 # -----------------------------------------------------------------------------
 # Start: brew tap
 homebrew/services
