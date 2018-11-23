@@ -610,9 +610,9 @@ function accpl.__get_sassdir() {
 function accpl.ra() {
   local httpd_path apachectl_path
 
-  # Preferentially use system apache since slipstream uses it (not trusting user $PATH)
-  httpd_path="$(    qte command ls /usr/sbin/httpd     || qte command ls "$brew_prefix/opt/httpd/bin/httpd")"
-  apachectl_path="$(qte command ls /usr/sbin/apachectl || qte command ls "$brew_prefix/bin/apachectl"      )"
+  # Preferentially use homebrew apache since slipstream uses it (not trusting user $PATH)
+  httpd_path="$(    qte command ls "$brew_prefix/opt/httpd/bin/httpd" || qte command ls /usr/sbin/httpd    )"
+  apachectl_path="$(qte command ls "$brew_prefix/bin/apachectl"       || qte command ls /usr/sbin/apachectl)"
 
   if [[ -z "$httpd_path" ]] || [[ -z "$apachectl_path" ]]; then
     die "Y U NO have httpd or apachectl?!" 127
