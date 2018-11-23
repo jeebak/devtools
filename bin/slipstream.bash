@@ -403,7 +403,7 @@ fi
 
 # -- PRIME THE PUMP -----------------------------------------------------------
 if is_linux; then
-  echo "== Processing $pkg_manager =="
+  show_status "== Processing $pkg_manager =="
   process "$pkg_manager"
   qt hash
 
@@ -413,7 +413,7 @@ if is_linux; then
   fi
 fi
 # -- PASSWORDLESS SUDO --------------------------------------------------------
-echo "== Processing Sudo Password =="
+show_status "== Processing Sudo Password =="
 
 if is_mac; then
   if ! qt sudo grep '^%admin[[:space:]]*ALL=(ALL) NOPASSWD: ALL' /etc/sudoers; then
@@ -421,7 +421,7 @@ if is_mac; then
     sudo sed -i.bak 's/\(%admin[[:space:]]*ALL[[:space:]]*=[[:space:]]*(ALL)\)[[:space:]]*ALL/\1 NOPASSWD: ALL/' /etc/sudoers
 
     if qt sudo diff /etc/sudoers /etc/sudoers.bak; then
-      echo "No change made to: /etc/sudoers"
+      errcho "No change made to: /etc/sudoers"
     else
       etc_git_commit "git add sudoers" 'Password-less sudo for "admin" group'
     fi
@@ -440,7 +440,7 @@ EOT
   fi
 fi
 # -- HOMEBREW -----------------------------------------------------------------
-echo "== Processing Homebrew =="
+show_status "== Processing Homebrew =="
 
 if ! qt command -v brew; then
   is_mac   && /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -473,7 +473,7 @@ process "brew leaves"
 is_mac   && process "brew leaves-mac"
 is_linux && process "brew leaves-linux"
 # -- INSTALL PYTHON / PIPS ----------------------------------------------------
-echo "== Processing Pip =="
+show_status "== Processing Pip =="
 
 if is_linux; then
   export PATH="$HOME/.pyenv/shims:$PATH"
@@ -490,7 +490,7 @@ fi
 
 process "pip"
 # -- INSTALL RUBY / GEMS ------------------------------------------------------
-echo "== Processing Gem =="
+show_status "== Processing Gem =="
 
 if is_linux; then
   export PATH="$HOME/.rbenv/shims:$PATH"
@@ -506,7 +506,7 @@ fi
 
 process "gem"
 # -- INSTALL NPM PACKAGES -----------------------------------------------------
-echo "== Processing Npm =="
+show_status "== Processing Npm =="
 
 if is_linux; then
   # Set N_PREFIX since it's /usr/local under linux, and would require sudo
@@ -527,7 +527,7 @@ fi
 
 process "npm"
 # -- DISABLE OUTGOING MAIL ----------------------------------------------------
-echo "== Processing Postfix =="
+show_status "== Processing Postfix =="
 
 if is_linux; then
   # TODO: cleanup logic
@@ -582,7 +582,7 @@ if sudo git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
 fi
 qt popd
 # -- INSTALL MARIADB (MYSQL) --------------------------------------------------
-echo "== Processing MariaDB =="
+show_status "== Processing MariaDB =="
 
 [[ ! -d "$BREW_PREFIX/etc/my.cnf.d" ]] && mkdir -p "$BREW_PREFIX/etc/my.cnf.d"
 # TODO: decouple from /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
@@ -616,7 +616,7 @@ if [[ "$mysqld_status" != "0" ]]; then
   mysql -u root mysql <<< "SET SQL_SAFE_UPDATES = 0; UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES; SET SQL_SAFE_UPDATES = 1;"
 fi
 # -- SETUP APACHE -------------------------------------------------------------
-echo "== Processing Apache =="
+show_status "== Processing Apache =="
 
 # TODO: switch from using system apache to homebrew apache
 # # Neuter System Apache, and don't worry about and /etc/ droppings
@@ -721,7 +721,7 @@ fi
 $SUDO_ON_MAC sed -i.bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
 if is_mac; then
   if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
-    echo "No change made to: apache2/httpd.conf"
+    errcho "No change made to: apache2/httpd.conf"
   else
     etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf"
   fi
@@ -735,7 +735,7 @@ if is_mac && ! qt sudo launchctl list org.apache.httpd; then
 fi
 # TODO: automatically start apache, for linux
 # -- WILDCARD DNS -------------------------------------------------------------
-echo "== Processing Dnsmasq =="
+show_status "== Processing Dnsmasq =="
 
 # TODO: decouple from /etc/homebrew/etc/dnsmasq.conf
 conffile="$BREW_PREFIX/etc/dnsmasq.conf"
@@ -795,7 +795,7 @@ EOT
   etc_git_commit "git add hosts" "Add dnsmasq note to hosts file"
 fi
 # -- SETUP BREW PHP / PHP.INI / XDEBUG ----------------------------------------
-echo "== Processing Brew PHP / php.ini / Xdebug =="
+show_status "== Processing Brew PHP / php.ini / Xdebug =="
 
 if is_mac; then
   [[ ! -d ~/Library/LaunchAgents ]] && mkdir -p  ~/Library/LaunchAgents
