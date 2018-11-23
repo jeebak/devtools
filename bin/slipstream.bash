@@ -119,7 +119,7 @@ function process() {
 
   is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
-  debug="$([[ ! -z "$DEBUG" ]] && echo echo || true)"
+  debug="$(if [[ ! -z "$DEBUG" ]]; then echo echo; fi)"
 
   # Compare what is already installed with what we want installed
   while read -r -u3 -a line; do
@@ -143,7 +143,7 @@ function process() {
       'brew php')
         [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
 
-        brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]* || true)"
+        brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]*; fi)"
         num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+' || true)"
 
         if [[ ! -z "$brew_php_linked" ]]; then
@@ -207,7 +207,7 @@ function process() {
         if is_mac; then
           # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
           if qt command -v csrutil && csrutil status | qt grep enabled; then
-            extra=(-n $BREW_PREFIX/bin)
+            extra=(-n "$BREW_PREFIX/bin")
           fi
 
           line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
@@ -554,7 +554,7 @@ process "npm"
 echo "== Processing Postfix =="
 
 if is_linux; then
-  # TODO: cleanup logic, and figure out configuration for dnf, and pacman
+  # TODO: cleanup logic, and figure out configuration for dnf, pacman, and zypper
   case "$pkg_manager" in
     'apt-get')
       if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
@@ -630,7 +630,7 @@ APACHE_BASE="/etc/apache2"
 is_linux && APACHE_BASE="$BREW_PREFIX/etc/httpd"
 HTTPD_CONF="$APACHE_BASE/httpd.conf"
 
-SUDO_ON_MAC="$(is_mac && echo sudo || true)"
+SUDO_ON_MAC="$(if is_mac; then echo sudo; fi)"
 show_status "Updating httpd.conf settings"
 for i in \
   'LoadModule socache_shmcb_module ' \
@@ -685,6 +685,7 @@ PHP_FPM_PROXY="fcgi://localhost/"
 [[ ! -d "$BREW_PREFIX/var/run" ]] && mkdir -p "$BREW_PREFIX/var/run"
 
 if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]] || ! qt grep "$PHP_FPM_HANDLER" "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.localhost\\.metaltoad-sites\\.com "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.xip\\.io "$APACHE_BASE/extra/localhost.conf"; then
+  # shellcheck disable=SC2086
   get_conf "localhost.conf" | qt $SUDO_ON_MAC tee "$APACHE_BASE/extra/localhost.conf"
 
   if ! qt grep '^# Local vhost and ssl, for \*.localhost$' "$HTTPD_CONF"; then
@@ -707,6 +708,7 @@ else
 fi
 
 if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' "$HTTPD_CONF"; then
+  # shellcheck disable=SC2086
   cat <<EOT | qt $SUDO_ON_MAC tee -a "$HTTPD_CONF"
 
 # To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)
@@ -897,7 +899,7 @@ elif is_linux; then
   qte killall php-fpm || true
 fi
 
-brew_php_linked="$(qte cd "$BREW_PREFIX/var/homebrew/linked" && qte ls -d php php@[57].[0-9]* || true)"
+brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]*; fi)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite --force php@7.1
