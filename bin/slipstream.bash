@@ -614,7 +614,6 @@ HTTPD_CONF="$APACHE_BASE/httpd.conf"
 
 [[ ! -d "/var/log/apache2/" ]] && { sudo mkdir "/var/log/apache2/"; sudo chown "$USER:$(id -ng)" "/var/log/apache2/"; }
 
-SUDO_ON_MAC="$(if is_mac; then echo sudo; fi)"
 show_status "Updating httpd.conf settings"
 for i in \
   'LoadModule socache_shmcb_module ' \
@@ -626,12 +625,12 @@ for i in \
   'LoadModule proxy_fcgi_module ' \
   'LoadModule proxy_module ' \
 ; do
-  $SUDO_ON_MAC sed -i.bak "s;#.*${i}\\(.*\\);${i}\\1;"  "$HTTPD_CONF"
+  sed -i.bak "s;#.*${i}\\(.*\\);${i}\\1;"  "$HTTPD_CONF"
 done
 
-$SUDO_ON_MAC sed -i.bak "s;^Listen 80.*$;Listen 80;"    "$HTTPD_CONF"
-$SUDO_ON_MAC sed -i.bak "s;^User .*$;User $USER;"       "$HTTPD_CONF"
-$SUDO_ON_MAC sed -i.bak "s;^Group .*$;Group $(id -gn);" "$HTTPD_CONF"
+sed -i.bak "s;^Listen 80.*$;Listen 80;"    "$HTTPD_CONF"
+sed -i.bak "s;^User .*$;User $USER;"       "$HTTPD_CONF"
+sed -i.bak "s;^Group .*$;Group $(id -gn);" "$HTTPD_CONF"
 
 DEST_DIR="/Users/$USER/Sites"
 
@@ -644,13 +643,8 @@ if [[ ! -d "$APACHE_BASE/ssl" ]]; then
   qt pushd "$$/ssl"
   genssl
   qt popd
-  $SUDO_ON_MAC mv "$$/ssl" "$APACHE_BASE"
+  mv "$$/ssl" "$APACHE_BASE"
   rmdir "$$"
-
-  if is_mac; then
-    sudo chown -R root:wheel "$APACHE_BASE/ssl"
-    etc_git_commit "git add apache2/ssl" "Add apache2/ssl files"
-  fi
 fi
 
 # Set a default value, if not set as an env
@@ -668,9 +662,9 @@ PHP_FPM_PROXY="fcgi://localhost/"
 
 [[ ! -d "$BREW_PREFIX/var/run" ]] && mkdir -p "$BREW_PREFIX/var/run"
 
-if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]] || ! qt grep "$PHP_FPM_HANDLER" "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.localhost\\.metaltoad-sites\\.com "$APACHE_BASE/extra/localhost.conf" || ! qt grep \\.xip\\.io "$APACHE_BASE/extra/localhost.conf"; then
+if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]]; then
   # shellcheck disable=SC2086
-  get_conf "localhost.conf" | qt $SUDO_ON_MAC tee "$APACHE_BASE/extra/localhost.conf"
+  get_conf "localhost.conf" | qt tee "$APACHE_BASE/extra/localhost.conf"
 
   if ! qt grep '^# Local vhost and ssl, for \*.localhost$' "$HTTPD_CONF"; then
     cat <<EOT | qt sudo tee -a "$HTTPD_CONF"
@@ -679,21 +673,17 @@ if [[ ! -f "$APACHE_BASE/extra/localhost.conf" ]] || ! qt grep "$PHP_FPM_HANDLER
 Include $APACHE_BASE/extra/localhost.conf
 EOT
   fi
-
-  is_mac && etc_git_commit "git add apache2/extra/localhost.conf" "Add apache2/extra/localhost.conf"
 else
   if qt grep ' ProxySet connectiontimeout=5 timeout=240$' "$APACHE_BASE/extra/localhost.conf"; then
     show_status "Update httpd/extra/localhost.conf ProxySet timeout value to 1800"
-    $SUDO_ON_MAC sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' "$APACHE_BASE/extra/localhost.conf"
-    $SUDO_ON_MAC rm "$APACHE_BASE/extra/localhost.conf.bak"
-
-    is_mac && etc_git_commit "git add apache2/extra/localhost.conf" "Update apache2/extra/localhost.conf ProxySet timeout value to 1800"
+    sed -i.bak 's/ ProxySet connectiontimeout=5 timeout=240/ ProxySet connectiontimeout=5 timeout=1800/' "$APACHE_BASE/extra/localhost.conf"
+    rm "$APACHE_BASE/extra/localhost.conf.bak"
   fi
 fi
 
 if ! qt grep '^# To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)$' "$HTTPD_CONF"; then
   # shellcheck disable=SC2086
-  cat <<EOT | qt $SUDO_ON_MAC tee -a "$HTTPD_CONF"
+  cat <<EOT | qt tee -a "$HTTPD_CONF"
 
 # To avoid: Gateway Timeout, during xdebug session (analogous changes made to the php.ini files)
 Timeout 1800
@@ -701,22 +691,13 @@ EOT
 fi
 
 # Have ServerName match CN in SSL Cert
-$SUDO_ON_MAC sed -i.bak 's/#ServerName www.example.com:80.*/ServerName 127.0.0.1/' "$HTTPD_CONF"
-if is_mac; then
-  if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
-    errcho "No change made to: apache2/httpd.conf"
-  else
-    etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf"
-  fi
-fi
-$SUDO_ON_MAC rm "${HTTPD_CONF}.bak"
+sed -i.bak 's/#ServerName www.example.com:80.*/ServerName 127.0.0.1/' "$HTTPD_CONF"
+rm "${HTTPD_CONF}.bak"
 
-# https://clickontyler.com/support/a/38/how-start-apache-automatically/
-if is_mac && ! qt sudo launchctl list org.apache.httpd; then
-  show_status "Loading: /System/Library/LaunchDaemons/org.apache.httpd.plist"
-  sudo launchctl load -w /System/Library/LaunchDaemons/org.apache.httpd.plist
+if ! qt pgrep -f "$BREW_PREFIX/bin/httpd"; then
+  is_mac   && sudo brew services start httpd
+  is_linux && sudo "$BREW_PREFIX/bin/apachectl" -k restart
 fi
-# TODO: automatically start apache, for linux
 # -- WILDCARD DNS -------------------------------------------------------------
 show_status "== Processing Dnsmasq =="
 
@@ -849,34 +830,6 @@ for i in "$BREW_PREFIX/etc/php/"*/php.ini; do
   fi
 done
 
-if is_mac; then
-  if [[ -d "/etc/homebrew/$APACHE_BASE" ]]; then
-    show_status "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
-    sudo rm -rf "/etc/homebrew/$APACHE_BASE"
-    etc_git_commit "git rm -r homebrew/$APACHE_BASE" "Deleting homebrew/$APACHE_BASE for switch to php-fpm"
-  fi
-
-  if [[ -d "$BREW_PREFIX/var/run/apache2" ]]; then
-    rm -rf "$BREW_PREFIX/var/run/apache2"
-  fi
-
-  # Account for both newly and previously provisioned scenarios
-  sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*libexec/apache2/libphp5.so\\);# \\1;"                         "$HTTPD_CONF"
-  sudo sed -i.bak "s;^\\(LoadModule[[:space:]]*php5_module[[:space:]]*$BREW_PREFIX/opt/php56/libexec/apache2/libphp5.so\\);# \\1;"  "$HTTPD_CONF"
-  sudo sed -i.bak "s;^\\(Include[[:space:]]\"*$BREW_PREFIX/var/run/apache2/php.conf\\);# \\1;"                                      "$HTTPD_CONF"
-  sudo rm "${HTTPD_CONF}.bak"
-
-  qt pushd /etc/
-  if git status | qt grep -E 'apache2/httpd.conf'; then
-    etc_git_commit "git add apache2/httpd.conf" "Update apache2/httpd.conf to use brew php-fpm"
-  fi
-  qt popd
-
-  while read -r -u3 service && [[ ! -z "$service" ]]; do
-    qte brew services stop "$service"
-  done 3< <(brew services list | grep -E -e '^php ' -e '^php@[57]' | grep ' started ' | cut -f1 -d' ')
-fi
-
 [[ ! -d "$BREW_PREFIX/var/log/" ]] && mkdir -p "$BREW_PREFIX/var/log/"
 # Make php@7.1 the default
 if is_mac; then
@@ -891,25 +844,10 @@ if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite --force php@7.1
 fi
 
-if is_mac; then
-  # Some "upgrades" from (Mountain Lion / Mavericks) Apache 2.2 to 2.4, seems to
-  # keep the 2.2 config files. The "LockFile" directive is an artifact of 2.2
-  #   http://apple.stackexchange.com/questions/211015/el-capitan-apache-error-message-ah00526
-  # This simple commenting out of the line seems to work just fine.
-  sudo sed -i.bak 's;^\(LockFile\);# \1;' "$APACHE_BASE/extra/httpd-mpm.conf"
-  sudo rm -f "$APACHE_BASE/extra/httpd-mpm.conf.bak"
-
-  qt pushd /etc/
-  if git status | qt grep 'apache2/extra/httpd-mpm.conf'; then
-    etc_git_commit "git add apache2/extra/httpd-mpm.conf" "Comment out LockFile in apache2/extra/httpd-mpm.conf"
-  fi
-  qt popd
-
-  sudo apachectl -k restart
-elif is_linux; then
+if is_linux; then
   ("$BREW_PREFIX/sbin/php-fpm" &)
-  sudo "$(brew --prefix)"/bin/apachectl -k restart
 fi
+sudo "$BREW_PREFIX/bin/apachectl" -k restart
 
 sleep 3
 # -- SETUP ADMINER ------------------------------------------------------------
