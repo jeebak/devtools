@@ -1356,6 +1356,9 @@ cat <<EOT
   print '<p>[test ' . \$prefix . 'SSL: <a href="' . \$url . '">' . \$url . '</a>]</p>';
 
   \$my_ip = getHostByName(getHostName());
+
+  \$link = @mysqli_connect('127.0.0.1', 'root', 'root', 'mysql');
+  \$mysqli_status = \$link ? mysqli_stat(\$link) : mysqli_connect_error();
 ?>
 
 <p>
@@ -1389,6 +1392,10 @@ cat <<EOT
 <pre>
   mysql -p -u root mysql
 </pre>
+<p>
+  <strong>Current status:</strong>
+  <dd><i><?php echo preg_replace('/  /', '<br/>', \$mysqli_status); ?></i></dd>
+</p>
 
 <p>
   You can now access Adminer at: <a href="http://adminer.localhost/">http://adminer.localhost/</a>
