@@ -1344,7 +1344,7 @@ EOT
 # -----------------------------------------------------------------------------
 # Start: slipstream
 cat <<EOT
-<div style="width: 600px; margin-bottom: 16px; margin-left: auto; margin-right: auto;">
+<div style="width: 934px; margin-bottom: 16px; margin-left: auto; margin-right: auto;">
   <h4>If you're seeing this, then it's a good sign that everything's working</h4>
 <?php
   if( ! empty(\$_SERVER['HTTPS']) && strtolower(\$_SERVER['HTTPS']) !== 'off') {
