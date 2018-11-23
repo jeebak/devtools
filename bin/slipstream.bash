@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# set -eo pipefail
+set -eo pipefail
 
 # -- HELPER FUNCTIONS, PT. 1 --------------------------------------------------
 DEBUG=NotEmpty
@@ -117,6 +117,7 @@ function clean() {
 function process() {
   local brew_php_linked debug extra line pecl_pkg num_ver
 
+  is_mac   && export PATH="/usr/local/bin:$PATH"
   is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
   debug="$(if [[ ! -z "$DEBUG" ]]; then echo echo; fi)"
@@ -133,7 +134,8 @@ function process() {
         $debug brew tap "${line[@]}"
         ;;
       'brew cask')
-        $debug brew cask install "${line[@]}"
+        # TODO: figure out how to determine if a non-brew cask already installed in /Applications
+        $debug brew cask install "${line[@]}" || true
         ;;
       'brew build-essential'|'brew leaves'*)
         # Quick hack to allow for extra --args
@@ -143,7 +145,7 @@ function process() {
       'brew php')
         [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
 
-        brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]*; fi)"
+        brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]* || true; fi)"
         num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+' || true)"
 
         if [[ ! -z "$brew_php_linked" ]]; then
@@ -204,18 +206,11 @@ function process() {
         $debug sudo dnf -y install "${line[@]}"
         ;;
       'gem')
-        if is_mac; then
-          # http://stackoverflow.com/questions/31972968/cant-install-gems-on-macos-x-el-capitan
-          if qt command -v csrutil && csrutil status | qt grep enabled; then
-            extra=(-n "$BREW_PREFIX/bin")
-          fi
-
-          line="$(grep -E "^$line[ ]*.*$" <(get_pkgs "$1"))"
-          $debug gem install -f "${extra[@]}" "${line[@]}"
-        elif is_linux; then
-          line=( $(grep -E "^$line[ ]*.*$" <(get_pkgs "$1")) )
-          $debug gem install -f "${line[@]}"
-        fi
+        line=( $(grep -E "^$line[ ]*.*$" <(get_pkgs "$1")) )
+        # TODO: Add to http://slipstream.localhost/
+        #   brew info ruby: ruby is keg-only, which means it was not symlinked into /usr/local, ...
+        is_mac && export PATH="/usr/local/opt/ruby/bin:$PATH"
+        $debug gem install -f "${line[@]}"
         ;;
       'npm')
         $debug npm install -g "${line[@]}"
@@ -446,6 +441,7 @@ fi
 # -- HOMEBREW -----------------------------------------------------------------
 echo "== Processing Homebrew =="
 
+is_mac   && export PATH="/usr/local/bin:$PATH"
 is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
 if ! qt command -v brew; then
@@ -909,7 +905,7 @@ elif is_linux; then
   qte killall php-fpm || true
 fi
 
-brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]*; fi)"
+brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]* || true; fi)"
 # Only link if brew php is not linked. If it is, we assume it was intentionally done
 if [[ -z "$brew_php_linked" ]]; then
   brew link --overwrite --force php@7.1
@@ -967,6 +963,8 @@ exit
 # -- LIST OF PACKAGES TO INSTALL ----------------------------------------------
 # .data
 # -----------------------------------------------------------------------------
+# TODO: revisit: apt-get, dnf, pacman, and zypper dependencies. they were added
+# before the "brew build-essential" group was added
 # Start: apt-get
 build-essential
 curl
@@ -1075,6 +1073,7 @@ wp-cli
 # Start: brew leaves-mac
 # Development Envs
 node
+ruby
 # Network
 dnsmasq
 # Shell
