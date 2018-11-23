@@ -738,7 +738,7 @@ conffile="$BREW_PREFIX/etc/dnsmasq.conf"
 is_linux && conffile="/etc/NetworkManager/dnsmasq.d/10-slipstream.conf"
 if [[ ! -f "$conffile" ]] || ! qt grep -E '^address=/.localhost/127.0.0.1$' "$conffile"; then
   show_status "Updating: $conffile"
-  [[ ! -d "${conffile%/*}" ]] && $SUDO_ON_MAC mkdir -p "${conffile%/*}"
+  [[ ! -d "${conffile%/*}" ]] && sudo mkdir -p "${conffile%/*}"
   cat <<EOT | qt sudo tee -a "$conffile"
 address=/.localhost/127.0.0.1
 EOT
