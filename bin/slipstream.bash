@@ -760,6 +760,7 @@ if is_mac; then
     cat <<EOT | qt sudo tee /etc/resolver/localhost
 nameserver 127.0.0.1
 EOT
+    etc_git_commit "git add resolver/localhost" "Add resolver/localhost file for dnsmasq updates"
   fi
 
   show_status "Starting: sudo brew services start dnsmasq"
