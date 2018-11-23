@@ -443,8 +443,8 @@ is_mac   && export PATH="/usr/local/bin:$PATH"
 is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
 if ! qt command -v brew; then
-  is_mac && /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-  is_linux && sh -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
+  is_mac   && /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+  is_linux && sh            -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
   qt hash
 fi
 
@@ -530,8 +530,7 @@ process "npm"
 echo "== Processing Postfix =="
 
 if is_linux; then
-  # TODO: cleanup logic, and figure out configuration for dnf, pacman, and zypper
-  # manjaro: "sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory"
+  # TODO: cleanup logic
   case "$pkg_manager" in
     'apt-get')
       if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
@@ -541,16 +540,20 @@ if is_linux; then
       fi
       ;;
     'dnf')
+      # TODO: figure out configuration
       if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
         sudo dnf -y install mailx postfix
       fi
       ;;
     'pacman')
+      # TODO: figure out configuration
+      # manjaro: "sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory"
       if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
         sudo pacman -S --noconfirm postfix
       fi
       ;;
     'zypper')
+      # TODO: figure out configuration
       if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
         sudo zypper install -y mailx postfix
       fi
