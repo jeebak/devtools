@@ -122,6 +122,7 @@ function process() {
 
   debug="$(if [[ ! -z "$DEBUG" ]]; then echo echo; fi)"
 
+  show_status "$1"
   # Compare what is already installed with what we want installed
   while read -r -u3 -a line; do
     [[ -z "$line" ]] && continue
@@ -400,9 +401,7 @@ fi
 # -- PRIME THE PUMP -----------------------------------------------------------
 if is_linux; then
   echo "== Processing $pkg_manager =="
-  show_status "$pkg_manager"
   process "$pkg_manager"
-
   qt hash
 
   if [[ ! -L /Users ]]; then
@@ -458,7 +457,6 @@ if is_linux; then
   sudo mkdir -p         "$BREW_PREFIX/var/homebrew/linked"
   sudo chown -R "$USER" "$BREW_PREFIX/var/homebrew/linked"
 
-  show_status "brew build-essential"
   process "brew build-essential"
 fi
 
@@ -466,28 +464,14 @@ fi
 brew doctor || true
 
 if is_mac; then
-  show_status "brew tap"
   process "brew tap"
-
-  show_status "brew cask"
   process "brew cask"
 fi
 
-show_status "brew php"
 process "brew php"
-
-show_status "brew leaves"
 process "brew leaves"
-
-if is_mac; then
-  show_status "brew leaves-mac"
-  process "brew leaves-mac"
-fi
-
-if is_linux; then
-  show_status "brew leaves-linux"
-  process "brew leaves-linux"
-fi
+is_mac   && process "brew leaves-mac"
+is_linux && process "brew leaves-linux"
 # -- INSTALL PYTHON / PIPS ----------------------------------------------------
 echo "== Processing Pip =="
 
@@ -504,7 +488,6 @@ if is_linux; then
   fi
 fi
 
-show_status "pip"
 process "pip"
 # -- INSTALL RUBY / GEMS ------------------------------------------------------
 echo "== Processing Gem =="
@@ -521,7 +504,6 @@ if is_linux; then
   fi
 fi
 
-show_status "gem"
 process "gem"
 # -- INSTALL NPM PACKAGES -----------------------------------------------------
 echo "== Processing Npm =="
@@ -543,7 +525,6 @@ if is_linux; then
   fi
 fi
 
-show_status "npm"
 process "npm"
 # -- DISABLE OUTGOING MAIL ----------------------------------------------------
 echo "== Processing Postfix =="
