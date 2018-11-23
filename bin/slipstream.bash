@@ -1339,6 +1339,8 @@ cat <<EOT
     \$url = "https://{\$_SERVER['HTTP_HOST']}/";
   }
   print '<p>[test ' . \$prefix . 'SSL: <a href="' . \$url . '">' . \$url . '</a>]</p>';
+
+  \$my_ip = getHostByName(getHostName());
 ?>
 
 <p>
@@ -1351,10 +1353,14 @@ cat <<EOT
   git clone git@github.com:username/your-website.git
 </pre>
 <p>
-  the website will be served at:
+  the website will be served at any of the following:
   <ul>
-    <li>http://your-website.localhost/ and</li>
-    <li>http://your-site.localhost.metaltoad-sites.com/</li>
+    <li>http://your-website.localhost/</li>
+    <li>http://your-website.localhost.metaltoad-sites.com/</li>
+    <li>http://your-website.lvh.me/</li>
+    <li>http://your-website.vcap.me/</li>
+    <li>http://your-website.<?php echo \$my_ip; ?>.nip.io/</li>
+    <li>http://your-website.<?php echo \$my_ip; ?>.xip.io/</li>
   </ul>
   automatically.
 </p>
