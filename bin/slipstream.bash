@@ -393,7 +393,7 @@ if [[ ! -f /etc/.git/config ]]; then
 
   sudo -H bash -c "
 [[ -z '$(git config --get user.name)'  ]] && git config --global user.name 'System Administrator'
-[[ -z '$(git config --get user.email)' ]] && git config --global user.email '$USER@localhost'"
+[[ -z '$(git config --get user.email)' ]] && git config --global user.email '$USER@localhost'" || true
 
   if ! qt command -v etckeeper; then
     etc_git_commit "git init" || true
