@@ -113,12 +113,14 @@ function clean() {
   sed 's/#.*$//;s/^[[:blank:]][[:blank:]]*//g;s/[[:blank:]][[:blank:]]*$//;s/[ :].*$//;/^$/d' "$1" | sort -u
 }
 
+# PATH need to been updated to include "$(brew --prefix)" before process() is 1st called
+# The paths are hard-coded, since this is happening before brew is installed
+is_mac   && export PATH="/usr/local/bin:$PATH"
+is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
+
 # Process install
 function process() {
   local brew_php_linked debug line pecl_pkg num_ver
-
-  is_mac   && export PATH="/usr/local/bin:$PATH"
-  is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
   debug="$(if [[ ! -z "$DEBUG" ]]; then echo echo; fi)"
 
@@ -209,6 +211,7 @@ function process() {
         read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
         # TODO: Add to http://slipstream.localhost/
         #   brew info ruby: ruby is keg-only, which means it was not symlinked into /usr/local, ...
+        # TODO: either check to see if the ".../opt/ruby/bin" is already in $PATH, or move outside function
         is_mac && export PATH="/usr/local/opt/ruby/bin:$PATH"
         $debug gem install -f "${line[@]}"
         ;;
@@ -439,9 +442,6 @@ fi
 # -- HOMEBREW -----------------------------------------------------------------
 echo "== Processing Homebrew =="
 
-is_mac   && export PATH="/usr/local/bin:$PATH"
-is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
-
 if ! qt command -v brew; then
   is_mac   && /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
   is_linux && sh            -c "$(curl -fsSL https://raw.githubusercontent.com/Linuxbrew/install/master/install.sh)"
@@ -476,7 +476,7 @@ is_linux && process "brew leaves-linux"
 echo "== Processing Pip =="
 
 if is_linux; then
-  export PATH="$PATH:$HOME/.pyenv/shims"
+  export PATH="$HOME/.pyenv/shims:$PATH"
   if [[ ! -x "$HOME/.pyenv/shims/python" ]]; then
     qt hash
     eval "$(pyenv init -)"
@@ -493,7 +493,7 @@ process "pip"
 echo "== Processing Gem =="
 
 if is_linux; then
-  export PATH="$PATH:$HOME/.rbenv/shims"
+  export PATH="$HOME/.rbenv/shims:$PATH"
   if [[ ! -x "$HOME/.rbenv/shims/ruby" ]]; then
     qt hash
     eval "$(rbenv init -)"
@@ -585,6 +585,7 @@ qt popd
 echo "== Processing MariaDB =="
 
 [[ ! -d "$BREW_PREFIX/etc/my.cnf.d" ]] && mkdir -p "$BREW_PREFIX/etc/my.cnf.d"
+# TODO: decouple from /etc/homebrew/etc/my.cnf.d/mysqld_innodb.cnf
 if [[ ! -f "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf" ]]; then
   show_status           "Creating: $BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
   get_conf "mysqld_innodb.cnf" >  "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf"
@@ -611,6 +612,7 @@ if [[ "$mysqld_status" != "0" ]]; then
   show_status "Setting mysql root password... waiting for mysqld to start"
   # Just sleep, waiting for mariadb to start
   sleep 7
+  # TODO: check to see if password's empty
   mysql -u root mysql <<< "SET SQL_SAFE_UPDATES = 0; UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES; SET SQL_SAFE_UPDATES = 1;"
 fi
 # -- SETUP APACHE -------------------------------------------------------------
@@ -735,6 +737,7 @@ fi
 # -- WILDCARD DNS -------------------------------------------------------------
 echo "== Processing Dnsmasq =="
 
+# TODO: decouple from /etc/homebrew/etc/dnsmasq.conf
 conffile="$BREW_PREFIX/etc/dnsmasq.conf"
 is_linux && conffile="/etc/NetworkManager/dnsmasq.d/10-slipstream.conf"
 if [[ ! -f "$conffile" ]] || ! qt grep -E '^address=/.localhost/127.0.0.1$' "$conffile"; then
