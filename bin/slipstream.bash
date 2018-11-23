@@ -718,7 +718,7 @@ EOT
 fi
 
 # Have ServerName match CN in SSL Cert
-$SUDO_ON_MAC sed -i.bak 's/#ServerName www.example.com:80/ServerName 127.0.0.1/' "$HTTPD_CONF"
+$SUDO_ON_MAC sed -i.bak 's/#ServerName www.example.com:80.*/ServerName 127.0.0.1/' "$HTTPD_CONF"
 if is_mac; then
   if qt diff "$HTTPD_CONF" "${HTTPD_CONF}.bak"; then
     errcho "No change made to: apache2/httpd.conf"
