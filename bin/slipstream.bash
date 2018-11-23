@@ -607,7 +607,14 @@ if [[ ! -f "$BREW_PREFIX/etc/my.cnf.d/mysqld_innodb.cnf" ]]; then
 fi
 
 # Start MariaDB
-if ! qt mysql.server status; then
+# The new version of 'mysql.server status' uses su which prompts for password
+# if you're not root, so we do this
+mysqld_pid=
+if [[ -f "$BREW_PREFIX/var/mysql/$(hostname).pid" ]]; then
+  read -r mysqld_pid < "$BREW_PREFIX/var/mysql/$(hostname).pid"
+fi
+
+if [[ -n "$mysqld_pid" ]] && ! kill -0 "$mysqld_pid"; then
   if is_mac; then
     brew services start mariadb
   elif is_linux; then
