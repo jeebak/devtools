@@ -610,11 +610,14 @@ fi
 # The new version of 'mysql.server status' uses su which prompts for password
 # if you're not root, so we do this
 mysqld_pid=
+mysqld_status=
 if [[ -f "$BREW_PREFIX/var/mysql/$(hostname).pid" ]]; then
   read -r mysqld_pid < "$BREW_PREFIX/var/mysql/$(hostname).pid"
+  kill -0 "$mysqld_pid"
+  mysqld_status="$?"
 fi
 
-if [[ -n "$mysqld_pid" ]] && ! kill -0 "$mysqld_pid"; then
+if [[ "$mysqld_status" != "0" ]]; then
   if is_mac; then
     brew services start mariadb
   elif is_linux; then
