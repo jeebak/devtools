@@ -115,7 +115,7 @@ function clean() {
 
 # Process install
 function process() {
-  local brew_php_linked debug extra line pecl_pkg num_ver
+  local brew_php_linked debug line pecl_pkg num_ver
 
   is_mac   && export PATH="/usr/local/bin:$PATH"
   is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
@@ -138,8 +138,7 @@ function process() {
         $debug brew cask install "${line[@]}" || true
         ;;
       'brew build-essential'|'brew leaves'*)
-        # Quick hack to allow for extra --args
-        line="$(grep -E "^$line[ ]*.*$" <(clean <(get_pkgs "$1")))"
+        read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
         $debug brew install "${line[@]}"
         ;;
       'brew php')
@@ -206,7 +205,7 @@ function process() {
         $debug sudo dnf -y install "${line[@]}"
         ;;
       'gem')
-        line=( $(grep -E "^$line[ ]*.*$" <(get_pkgs "$1")) )
+        read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
         # TODO: Add to http://slipstream.localhost/
         #   brew info ruby: ruby is keg-only, which means it was not symlinked into /usr/local, ...
         is_mac && export PATH="/usr/local/opt/ruby/bin:$PATH"
