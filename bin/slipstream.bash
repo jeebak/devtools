@@ -532,12 +532,18 @@ process "gem"
 echo "== Processing Npm =="
 
 if is_linux; then
+  # Set N_PREFIX since it's /usr/local under linux, and would require sudo
   export N_PREFIX="$HOME/n"
   export PATH="$HOME/n/bin:$PATH"
+  # n-install aborts if it finds Node.js-related binaries already in $PATH
+  # brew uses node, reports icu4c, which in turn is a dep for php
+  if qt brew list node; then
+    brew unlink node
+    rm -f "$BREW_PREFIX/bin/npm"
+  fi
   if [[ ! -x "$HOME/n/bin/node" ]]; then
     # https://github.com/mklement0/n-install
     curl -L https://git.io/n-install | bash -s -- -y
-    # Set  N_PREFIX since it's /usr/local under linux, and would require sudo
     n lts
   fi
 fi
