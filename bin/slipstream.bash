@@ -555,6 +555,7 @@ echo "== Processing Postfix =="
 
 if is_linux; then
   # TODO: cleanup logic, and figure out configuration for dnf, pacman, and zypper
+  # manjaro: "sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory"
   case "$pkg_manager" in
     'apt-get')
       if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
@@ -1022,7 +1023,7 @@ iterm2
 # http://apple.stackexchange.com/questions/153584/install-java-jre-6-next-to-jre-7-on-os-x-10-10-yosemite
 # java
 # http://msol.io/blog/tech/2014/03/10/work-more-efficiently-on-your-mac-for-developers/#tap-caps-lock-for-escape
-p4merge
+p4v
 sequel-pro
 slack
 sourcetree
