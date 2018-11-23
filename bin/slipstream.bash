@@ -604,16 +604,17 @@ fi
 
 if [[ "$mysqld_status" != "0" ]]; then
   if is_mac; then
-    brew services start mariadb
+    brew services restart mariadb
   elif is_linux; then
     # TODO: figure out how to start automatically
-    (qt mysql.server start &)
+    (qt mysql.server stop; qt mysql.server start &)
   fi
   show_status "Setting mysql root password... waiting for mysqld to start"
   # Just sleep, waiting for mariadb to start
   sleep 7
-  # TODO: check to see if password's empty
-  mysql -u root mysql <<< "SET SQL_SAFE_UPDATES = 0; UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES; SET SQL_SAFE_UPDATES = 1;"
+  if qt mysql -u root <<< 'SELECT 1;'; then
+    mysql -u root mysql <<< "SET SQL_SAFE_UPDATES = 0; UPDATE user SET password=PASSWORD('root') WHERE User='root'; FLUSH PRIVILEGES; SET SQL_SAFE_UPDATES = 1;"
+  fi
 fi
 # -- SETUP APACHE -------------------------------------------------------------
 show_status "== Processing Apache =="
