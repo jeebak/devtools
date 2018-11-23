@@ -626,6 +626,15 @@ fi
 # -- SETUP APACHE -------------------------------------------------------------
 echo "== Processing Apache =="
 
+# TODO: switch from using system apache to homebrew apache
+# # Neuter System Apache, and don't worry about and /etc/ droppings
+# if qt  pgrep    -f "/usr/sbin/httpd"; then
+#   sudo pkill -9 -f "/usr/sbin/httpd"
+#
+#   show_status "Unloading: /System/Library/LaunchDaemons/org.apache.httpd.plist"
+#   sudo launchctl unload -w /System/Library/LaunchDaemons/org.apache.httpd.plist
+# fi
+
 APACHE_BASE="/etc/apache2"
 is_linux && APACHE_BASE="$BREW_PREFIX/etc/httpd"
 HTTPD_CONF="$APACHE_BASE/httpd.conf"
