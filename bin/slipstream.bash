@@ -182,7 +182,7 @@ function process() {
                 # TODO: refine this for multiple versions
                 pecl_pkg="$(sed "s/:$line//" <<< "$pecl_pkg")"
                 # TODO: better error handling
-                qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+                qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
               else
                 pecl_pkg="$(sed 's/:.*$//' <<< "$pecl_pkg")"
                 if is_mac; then
@@ -191,10 +191,10 @@ function process() {
                       CFLAGS='-fgnu89-inline' \
                       LDFLAGS='-fgnu89-inline' \
                       CXXFLAGS='-fgnu89-inline' \
-                    "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+                    "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
                 elif is_linux; then
                   # TODO: better error handling
-                  qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< '' || true
+                  qt "$BREW_PREFIX/opt/$line/bin/pecl" install "$pecl_pkg" <<< ''
                 fi
               fi
             fi
