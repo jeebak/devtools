@@ -539,16 +539,34 @@ if is_linux; then
       fi
       ;;
     'dnf')
-      # TODO: figure out configuration
       if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
         sudo dnf -y install mailx postfix
+        # TODO: figure out configuration for mageia. the restart fixed this for fedora
       fi
       ;;
     'pacman')
-      # TODO: figure out configuration
-      # manjaro: "sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory"
+      # sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory
+      #   requires: pacman -Syu --noconfirm
       if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
         sudo pacman -S --noconfirm postfix
+
+        sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  /etc/postfix/main.cf
+        sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         /etc/postfix/main.cf
+
+        # shellcheck disable=SC2016
+        for i in \
+          'mydestination = $myhostname, localhost.$mydomain, localhost' \
+          'inet_interfaces = $myhostname, localhost' \
+          'mynetworks_style = host' \
+        ; do
+          sudo sed -i.bak "s;#.*${i}\$;${i};" /etc/postfix/main.cf
+        done
+
+        cat <<EOT | sudo tee -a /etc/postfix/main.cf
+
+default_transport = error: outside mail is not deliverable
+EOT
+        sudo newaliases
       fi
       ;;
     'zypper')
@@ -558,6 +576,8 @@ if is_linux; then
       fi
       ;;
   esac
+  # postdrop: warning: unable to look up public/pickup: No such file or directory
+  sudo systemctl restart postfix
 fi
 
 if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
@@ -984,6 +1004,7 @@ java-1.8.0-openjdk
 make
 # For linuxbrew php
 cyrus-sasl-devel
+# TODO: mageia, tried: lib64sasl2-devel instead, and still failed
 # For pyenv and/or rbenv
 libffi-devel
 zlib-devel
@@ -1063,6 +1084,12 @@ xdebug:php@5.6-2.5.5
 # Development Envs
 # Database
 mariadb
+# The mytop script is part of mariadb, but needs:
+#   brew install perl,
+#   editing the hashbang in $BREW_PREFIX/bin/mytop to $BREW_PREFIX/bin/perl, and
+#   perl -MCPAN -e 'install Bundle::DBI'
+#   perl -MCPAN -e shell <<< 'install Term::ReadKey'
+#   perl -MCPAN -e shell <<< 'install DBD::mysql'
 # Network
 sshuttle
 # Shell
