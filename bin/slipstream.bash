@@ -399,7 +399,6 @@ if [[ ! -f /etc/.git/config ]]; then
     etc_git_commit "git add ." "Initial commit"
   fi
 fi
-
 # -- PRIME THE PUMP -----------------------------------------------------------
 if is_linux; then
   show_status "== Processing $pkg_manager =="
@@ -438,6 +437,90 @@ EOT
     etc_git_commit "git add /etc/sudoers.d/10-local-users" "Password-less sudo for '$USER'"
   fi
 fi
+# -- DISABLE OUTGOING MAIL ----------------------------------------------------
+show_status "== Processing Postfix =="
+
+if is_linux; then
+  # TODO: cleanup logic
+  case "$pkg_manager" in
+    'apt-get')
+      if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
+        sudo debconf-set-selections <<< "postfix postfix/mailname string $(hostname)"
+        sudo debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
+        sudo apt-get install -y bsd-mailx postfix
+      fi
+      ;;
+    'dnf')
+      if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
+        sudo dnf -y install mailx postfix
+      fi
+      ;;
+    'pacman')
+      # sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory
+      #   requires: pacman -Syu --noconfirm
+      if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
+        sudo pacman -S --noconfirm postfix
+      fi
+      ;;
+    'zypper')
+      if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
+        sudo zypper install -y mailx postfix
+      fi
+      ;;
+  esac
+
+  case "$pkg_manager" in
+    'dnf'|'pacman')
+      if ! qt 'default_transport = error: outside mail is not deliverable' /etc/postfix/main.cf; then
+        # TODO: figure out configuration for mageia. the restart fixed this for fedora
+        sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  /etc/postfix/main.cf
+        sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         /etc/postfix/main.cf
+
+        # shellcheck disable=SC2016
+        for i in \
+          'mydestination = $myhostname, localhost.$mydomain, localhost' \
+          'inet_interfaces = $myhostname, localhost' \
+          'mynetworks_style = host' \
+        ; do
+          sudo sed -i.bak "s;#.*${i}\$;${i};" /etc/postfix/main.cf
+        done
+
+        cat <<EOT | sudo tee -a /etc/postfix/main.cf
+
+default_transport = error: outside mail is not deliverable
+EOT
+        sudo newaliases
+      fi
+      ;;
+    'zypper')
+      # TODO: figure out configuration
+      ;;
+  esac
+
+  # postdrop: warning: unable to look up public/pickup: No such file or directory
+  sudo systemctl restart postfix
+fi
+
+if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
+  show_status "Disabling outgoing mail"
+  cat <<EOT | qt sudo tee -a /etc/postfix/main.cf
+
+virtual_alias_maps = regexp:/etc/postfix/virtual
+EOT
+fi
+
+if ! qt grep "$USER" /etc/postfix/virtual; then
+  cat <<EOT | qt sudo tee -a /etc/postfix/virtual
+
+/.*/ $USER@localhost
+EOT
+fi
+
+qt pushd /etc/
+if sudo git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
+  etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
+fi
+qt popd
 # -- HOMEBREW -----------------------------------------------------------------
 show_status "== Processing Homebrew =="
 
@@ -525,90 +608,6 @@ if is_linux; then
 fi
 
 process "npm"
-# -- DISABLE OUTGOING MAIL ----------------------------------------------------
-show_status "== Processing Postfix =="
-
-if is_linux; then
-  # TODO: cleanup logic
-  case "$pkg_manager" in
-    'apt-get')
-      if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
-        sudo debconf-set-selections <<< "postfix postfix/mailname string $(hostname)"
-        sudo debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
-        sudo apt-get install -y bsd-mailx postfix
-      fi
-      ;;
-    'dnf')
-      if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
-        sudo dnf -y install mailx postfix
-      fi
-      ;;
-    'pacman')
-      # sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory
-      #   requires: pacman -Syu --noconfirm
-      if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
-        sudo pacman -S --noconfirm postfix
-      fi
-      ;;
-    'zypper')
-      if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
-        sudo zypper install -y mailx postfix
-      fi
-      ;;
-  esac
-
-  case "$pkg_manager" in
-    'dnf'|'pacman')
-      if ! qt 'default_transport = error: outside mail is not deliverable' /etc/postfix/main.cf; then
-        # TODO: figure out configuration for mageia. the restart fixed this for fedora
-        sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  /etc/postfix/main.cf
-        sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         /etc/postfix/main.cf
-
-        # shellcheck disable=SC2016
-        for i in \
-          'mydestination = $myhostname, localhost.$mydomain, localhost' \
-          'inet_interfaces = $myhostname, localhost' \
-          'mynetworks_style = host' \
-        ; do
-          sudo sed -i.bak "s;#.*${i}\$;${i};" /etc/postfix/main.cf
-        done
-
-        cat <<EOT | sudo tee -a /etc/postfix/main.cf
-
-default_transport = error: outside mail is not deliverable
-EOT
-        sudo newaliases
-      fi
-      ;;
-    'zypper')
-      # TODO: figure out configuration
-      ;;
-  esac
-
-  # postdrop: warning: unable to look up public/pickup: No such file or directory
-  sudo systemctl restart postfix
-fi
-
-if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
-  show_status "Disabling outgoing mail"
-  cat <<EOT | qt sudo tee -a /etc/postfix/main.cf
-
-virtual_alias_maps = regexp:/etc/postfix/virtual
-EOT
-fi
-
-if ! qt grep "$USER" /etc/postfix/virtual; then
-  cat <<EOT | qt sudo tee -a /etc/postfix/virtual
-
-/.*/ $USER@localhost
-EOT
-fi
-
-qt pushd /etc/
-if sudo git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
-  etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
-fi
-qt popd
 # -- INSTALL MARIADB (MYSQL) --------------------------------------------------
 show_status "== Processing MariaDB =="
 
