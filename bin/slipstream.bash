@@ -991,6 +991,7 @@ libmemcached
 binutils
 gcc
 linux-headers
+pkg-config
 # End: brew build-essential
 # -----------------------------------------------------------------------------
 # Start: brew tap
