@@ -631,6 +631,8 @@ APACHE_BASE="/etc/apache2"
 is_linux && APACHE_BASE="$BREW_PREFIX/etc/httpd"
 HTTPD_CONF="$APACHE_BASE/httpd.conf"
 
+[[ ! -d "/var/log/apache2/" ]] && { sudo mkdir "/var/log/apache2/"; sudo chown "$USER:$(id -ng)" "/var/log/apache2/"; }
+
 SUDO_ON_MAC="$(if is_mac; then echo sudo; fi)"
 show_status "Updating httpd.conf settings"
 for i in \
@@ -925,7 +927,6 @@ if is_mac; then
   sudo apachectl -k restart
 elif is_linux; then
   ("$BREW_PREFIX/sbin/php-fpm" &)
-  [[ ! -d "/var/log/apache2/" ]] && { sudo mkdir "/var/log/apache2/"; sudo chown "$USER:$(id -ng)" "/var/log/apache2/"; }
   sudo "$(brew --prefix)"/bin/apachectl -k restart
 fi
 
