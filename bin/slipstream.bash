@@ -554,60 +554,6 @@ process "brew php"
 process "brew leaves"
 is_mac   && process "brew leaves-mac"
 is_linux && process "brew leaves-linux"
-# -- INSTALL PYTHON / PIPS ----------------------------------------------------
-show_status "== Processing Pip =="
-
-if is_linux; then
-  export PATH="$HOME/.pyenv/shims:$PATH"
-  if [[ ! -x "$HOME/.pyenv/shims/python" ]]; then
-    qt hash
-    eval "$(pyenv init -)"
-    # Latest stable version
-    # Versions 2.7.* does not support OpenSSL1.1.0
-    pyenv install 3.7.1
-    pyenv global 3.7.1
-    qt hash
-  fi
-fi
-
-process "pip"
-# -- INSTALL RUBY / GEMS ------------------------------------------------------
-show_status "== Processing Gem =="
-
-if is_linux; then
-  export PATH="$HOME/.rbenv/shims:$PATH"
-  if [[ ! -x "$HOME/.rbenv/shims/ruby" ]]; then
-    qt hash
-    eval "$(rbenv init -)"
-    # Latest stable version
-    rbenv install 2.5.3
-    rbenv global 2.5.3
-    qt hash
-  fi
-fi
-
-process "gem"
-# -- INSTALL NPM PACKAGES -----------------------------------------------------
-show_status "== Processing Npm =="
-
-if is_linux; then
-  # Set N_PREFIX since it's /usr/local under linux, and would require sudo
-  export N_PREFIX="$HOME/n"
-  export PATH="$HOME/n/bin:$PATH"
-  # n-install aborts if it finds Node.js-related binaries already in $PATH
-  # brew uses node, reports icu4c, which in turn is a dep for php
-  if qt brew list node; then
-    brew unlink node
-    rm -f "$BREW_PREFIX/bin/npm"
-  fi
-  if [[ ! -x "$HOME/n/bin/node" ]]; then
-    # https://github.com/mklement0/n-install
-    curl -L https://git.io/n-install | bash -s -- -y
-    n lts
-  fi
-fi
-
-process "npm"
 # -- INSTALL MARIADB (MYSQL) --------------------------------------------------
 show_status "== Processing MariaDB =="
 
@@ -975,6 +921,60 @@ else
   rm -f  "$DEST_DIR/adminer/webroot/index.php" # could be dead symlink
   curl -L -o "$DEST_DIR/adminer/webroot/index.php" "https://github.com/vrana/adminer/releases/download/$latest/adminer-${latest/v/}-en.php"
 fi
+# -- INSTALL PYTHON / PIPS ----------------------------------------------------
+show_status "== Processing Pip =="
+
+if is_linux; then
+  export PATH="$HOME/.pyenv/shims:$PATH"
+  if [[ ! -x "$HOME/.pyenv/shims/python" ]]; then
+    qt hash
+    eval "$(pyenv init -)"
+    # Latest stable version
+    # Versions 2.7.* does not support OpenSSL1.1.0
+    pyenv install 3.7.1
+    pyenv global 3.7.1
+    qt hash
+  fi
+fi
+
+process "pip"
+# -- INSTALL RUBY / GEMS ------------------------------------------------------
+show_status "== Processing Gem =="
+
+if is_linux; then
+  export PATH="$HOME/.rbenv/shims:$PATH"
+  if [[ ! -x "$HOME/.rbenv/shims/ruby" ]]; then
+    qt hash
+    eval "$(rbenv init -)"
+    # Latest stable version
+    rbenv install 2.5.3
+    rbenv global 2.5.3
+    qt hash
+  fi
+fi
+
+process "gem"
+# -- INSTALL NPM PACKAGES -----------------------------------------------------
+show_status "== Processing Npm =="
+
+if is_linux; then
+  # Set N_PREFIX since it's /usr/local under linux, and would require sudo
+  export N_PREFIX="$HOME/n"
+  export PATH="$HOME/n/bin:$PATH"
+  # n-install aborts if it finds Node.js-related binaries already in $PATH
+  # brew uses node, reports icu4c, which in turn is a dep for php
+  if qt brew list node; then
+    brew unlink node
+    rm -f "$BREW_PREFIX/bin/npm"
+  fi
+  if [[ ! -x "$HOME/n/bin/node" ]]; then
+    # https://github.com/mklement0/n-install
+    curl -L https://git.io/n-install | bash -s -- -y
+    n lts
+  fi
+fi
+
+process "npm"
 # -- SHOW THE USER CONFIRMATION PAGE ------------------------------------------
 [[ ! -d "$DEST_DIR/slipstream/webroot" ]] && mkdir -p "$DEST_DIR/slipstream/webroot"
 get_conf "slipstream" > "$DEST_DIR/slipstream/webroot/index.php"
