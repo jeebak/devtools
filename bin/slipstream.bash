@@ -967,6 +967,8 @@ build-essential
 curl
 default-jdk
 git
+# For linuxbrew php
+libsasl2-dev
 # For pyenv and/or rbenv
 libbz2-dev
 libffi-dev
@@ -979,6 +981,8 @@ zlib1g-dev
 dnsmasq
 java-1.8.0-openjdk
 make
+# For linuxbrew php
+cyrus-sasl-devel
 # For pyenv and/or rbenv
 libffi-devel
 zlib-devel
