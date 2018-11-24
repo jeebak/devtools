@@ -377,7 +377,7 @@ if [[ ! -f /etc/.git/config ]]; then
         fi
         ;;
       'pacman')
-        sudo pacman -Syy --noconfirm # The -Syu seems to do entire system upgrade
+        sudo pacman -Syu --noconfirm # to do an entire system upgrade, was -Syy
         sudo pacman -S --noconfirm etckeeper
         sudo etckeeper init
         ;;
@@ -456,8 +456,6 @@ if is_linux; then
       fi
       ;;
     'pacman')
-      # sendmail: error while loading shared libraries: libicui18n.so.63: cannot open shared object file: No such file or directory
-      #   requires: pacman -Syu --noconfirm
       if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
         sudo pacman -S --noconfirm postfix
       fi
