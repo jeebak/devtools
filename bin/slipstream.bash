@@ -1022,6 +1022,10 @@ vlc
 # Start: brew php
 # Php 7.2 dropped mcrypt support. Previous versions now have it built in: php -m | grep mcrypt
 httpd
+# This needs to be available for the imagemagick, memcached PECLs
+imagemagick
+libmemcached
+memcached
 php
 php@5.6
 php@7.0
