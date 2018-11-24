@@ -541,7 +541,6 @@ if is_linux; then
     'dnf')
       if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
         sudo dnf -y install mailx postfix
-        # TODO: figure out configuration for mageia. the restart fixed this for fedora
       fi
       ;;
     'pacman')
@@ -549,7 +548,19 @@ if is_linux; then
       #   requires: pacman -Syu --noconfirm
       if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
         sudo pacman -S --noconfirm postfix
+      fi
+      ;;
+    'zypper')
+      if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
+        sudo zypper install -y mailx postfix
+      fi
+      ;;
+  esac
 
+  case "$pkg_manager" in
+    'dnf'|'pacman')
+      if ! qt 'default_transport = error: outside mail is not deliverable' /etc/postfix/main.cf; then
+        # TODO: figure out configuration for mageia. the restart fixed this for fedora
         sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  /etc/postfix/main.cf
         sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         /etc/postfix/main.cf
 
@@ -571,11 +582,9 @@ EOT
       ;;
     'zypper')
       # TODO: figure out configuration
-      if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
-        sudo zypper install -y mailx postfix
-      fi
       ;;
   esac
+
   # postdrop: warning: unable to look up public/pickup: No such file or directory
   sudo systemctl restart postfix
 fi
