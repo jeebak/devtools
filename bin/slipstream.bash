@@ -3,8 +3,6 @@
 set -eo pipefail
 
 # -- HELPER FUNCTIONS, PT. 1 --------------------------------------------------
-DEBUG=NotEmpty
-DEBUG=
 NOW="$(date '+%Y-%m-%d_%H-%M-%S')"
 
 # Echo to strerr
@@ -120,29 +118,28 @@ is_linux && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 
 # Process install
 function process() {
-  local brew_php_linked debug line pecl_pkg num_ver
-
-  debug="$(if [[ ! -z "$DEBUG" ]]; then echo echo; fi)"
+  local brew_php_linked line pecl_pkg num_ver
 
   show_status "$1"
   # Compare what is already installed with what we want installed
   while read -r -u3 -a line; do
     [[ -z "$line" ]] && continue
     show_status "($1) $line"
+
+    read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
     case "$1" in
-      'apt-get')
-        $debug sudo apt-get install -y "${line[@]}"
+      'apt-get'|'dnf'|'zypper')
+        sudo "$1" install -y "${line[@]}"
         ;;
       'brew tap')
-        $debug brew tap "${line[@]}"
+        brew tap "${line[@]}"
         ;;
       'brew cask')
         # TODO: figure out how to determine if a non-brew cask already installed in /Applications
-        $debug brew cask install "${line[@]}" || true
+        brew cask install "${line[@]}" || true
         ;;
       'brew build-essential'|'brew leaves'*)
-        read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
-        $debug brew install "${line[@]}"
+        brew install "${line[@]}"
         ;;
       'brew php')
         [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
@@ -163,13 +160,13 @@ function process() {
         fi
         rm -rf "$BREW_PREFIX/share/${line/php/pear}"
 
-        $debug brew install "${line[@]}"
-        $debug brew link --overwrite --force "$line"
+        brew install "${line[@]}"
+        brew link --overwrite --force "$line"
 
         show_status "Installing PECLs for: $line"
 
         if [[ -x "$BREW_PREFIX/opt/$line/bin/pecl" ]]; then
-          $debug "$BREW_PREFIX/opt/$line/bin/pecl" channel-update pecl.php.net
+          "$BREW_PREFIX/opt/$line/bin/pecl" channel-update pecl.php.net
 
           # This inner loop to install pecl packages for specific php versions'
           # only run when the brew install for the specific version's run, i.e.,
@@ -204,25 +201,18 @@ function process() {
           done 4< <(get_pkgs "pecl")
         fi
         ;;
-      'dnf')
-        $debug sudo dnf -y install "${line[@]}"
-        ;;
       'gem')
-        read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
         # TODO: Add to http://slipstream.localhost/
         #   brew info ruby: ruby is keg-only, which means it was not symlinked into /usr/local, ...
         # TODO: either check to see if the ".../opt/ruby/bin" is already in $PATH, or move outside function
         is_mac && export PATH="/usr/local/opt/ruby/bin:$PATH"
-        $debug gem install -f "${line[@]}"
+        gem install -f "${line[@]}"
         ;;
       'npm')
-        $debug npm install -g "${line[@]}"
+        npm install -g "${line[@]}"
         ;;
       'pacman')
-        $debug sudo pacman -S --noconfirm "${line[@]}"
-        ;;
-      'zypper')
-        $debug sudo zypper install -y "${line[@]}"
+        sudo pacman -S --noconfirm "${line[@]}"
         ;;
       *)
         ;;
