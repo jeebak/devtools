@@ -444,40 +444,26 @@ fi
 # -- DISABLE OUTGOING MAIL ----------------------------------------------------
 show_status "== Processing Postfix =="
 
+POSTFIX_CONF="/etc/postfix/main.cf"
+# Macs have postfix available by default
 if is_linux; then
-  # TODO: cleanup logic
   case "$pkg_manager" in
     'apt-get')
-      if ! qte apt list --installed | sed 's;/.*$;;' | qt grep postfix; then
+      if ! qte debconf-show postfix | grep '^\*' | qt grep 'postfix/mailname:'; then
         sudo debconf-set-selections <<< "postfix postfix/mailname string $(hostname)"
+      fi
+      if ! qte debconf-show postfix | grep '^\*' | qt grep 'postfix/main_mailer_type:'; then
         sudo debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
-        sudo apt-get install -y bsd-mailx postfix
       fi
+      # apt-get is the only one that requires config before install-ing
+      sudo apt-get install -y bsd-mailx postfix
       ;;
-    'dnf')
-      if ! qte dnf list installed | sed 's/\..*$//' | qt grep postfix; then
-        sudo dnf -y install mailx postfix
-      fi
-      ;;
-    'pacman')
-      if ! qte pacman -Qn | sed 's/ .*$//' | qt grep postfix; then
-        sudo pacman -S --noconfirm postfix
-      fi
-      ;;
-    'zypper')
-      if ! qte zypper search --installed-only | sed 's;^i *| *\([^ ][^ ]*\).*$;\1;' | qt grep postfix; then
-        sudo zypper install -y mailx postfix
-      fi
-      ;;
-  esac
-
-  case "$pkg_manager" in
     'dnf'|'pacman')
       # Fedora works fine w/out any further configuration. Quick check to skip if is_fedora
-      if ! is_fedora && ! qt 'default_transport = error: outside mail is not deliverable' /etc/postfix/main.cf; then
+      if ! is_fedora && ! qt 'default_transport = error: outside mail is not deliverable' "$POSTFIX_CONF"; then
         # TODO: figure out configuration for mageia. the systemctl restart fixed the postdrop warning for fedora
-        sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  /etc/postfix/main.cf
-        sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         /etc/postfix/main.cf
+        sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  "$POSTFIX_CONF"
+        sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         "$POSTFIX_CONF"
 
         # shellcheck disable=SC2016
         for i in \
@@ -485,10 +471,10 @@ if is_linux; then
           'inet_interfaces = $myhostname, localhost' \
           'mynetworks_style = host' \
         ; do
-          sudo sed -i.bak "s;#.*${i}\$;${i};" /etc/postfix/main.cf
+          sudo sed -i.bak "s;#.*${i}\$;${i};" "$POSTFIX_CONF"
         done
 
-        cat <<EOT | qt sudo tee -a /etc/postfix/main.cf
+        cat <<EOT | qt sudo tee -a "$POSTFIX_CONF"
 
 default_transport = error: outside mail is not deliverable
 EOT
@@ -499,14 +485,11 @@ EOT
       # TODO: figure out configuration
       ;;
   esac
-
-  # postdrop: warning: unable to look up public/pickup: No such file or directory
-  sudo systemctl restart postfix
 fi
 
-if ! qt grep '^virtual_alias_maps' /etc/postfix/main.cf; then
+if ! qt grep '^virtual_alias_maps' "$POSTFIX_CONF"; then
   show_status "Disabling outgoing mail"
-  cat <<EOT | qt sudo tee -a /etc/postfix/main.cf
+  cat <<EOT | qt sudo tee -a "$POSTFIX_CONF"
 
 virtual_alias_maps = regexp:/etc/postfix/virtual
 EOT
@@ -521,10 +504,13 @@ fi
 
 qt pushd /etc/
 if sudo git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
-  sudo rm -f /etc/postfix/main.cf.bak
+  sudo rm -f postfix/main.cf.bak
   etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
 fi
 qt popd
+
+# postdrop: warning: unable to look up public/pickup: No such file or directory
+is_linux && sudo systemctl restart postfix
 # -- HOMEBREW -----------------------------------------------------------------
 show_status "== Processing Homebrew =="
 
@@ -558,7 +544,7 @@ process "brew php"
 process "brew leaves"
 is_mac   && process "brew leaves-mac"
 is_linux && process "brew leaves-linux"
-# -- INSTALL MARIADB (MYSQL) --------------------------------------------------
+# -- SETUP MARIADB (MYSQL) --------------------------------------------------
 show_status "== Processing MariaDB =="
 
 [[ ! -d "$BREW_PREFIX/etc/my.cnf.d" ]] && mkdir -p "$BREW_PREFIX/etc/my.cnf.d"
@@ -1013,7 +999,9 @@ zlib1g-dev
 # Start: dnf
 dnsmasq
 java-1.8.0-openjdk
+mailx
 make
+postfix
 # For linuxbrew php
 cyrus-sasl-devel
 # TODO: mageia, tried: lib64sasl2-devel instead, and still failed
@@ -1027,11 +1015,14 @@ dnsmasq
 dnsutils
 git
 jdk10-openjdk
+postfix
 # For linuxbrew php
 libmemcached
 # End: pacman
 # -----------------------------------------------------------------------------
 # Start: zypper
+mailx
+postfix
 # End: zypper
 # -----------------------------------------------------------------------------
 # Start: brew build-essential
@@ -1102,6 +1093,9 @@ mariadb
 #   perl -MCPAN -e 'install Bundle::DBI'
 #   perl -MCPAN -e shell <<< 'install Term::ReadKey'
 #   perl -MCPAN -e shell <<< 'install DBD::mysql'
+# These were already available
+#   perl -MCPAN -e shell <<< 'install Term::ANSIColor'
+#   perl -MCPAN -e shell <<< 'install Time::HiRes'
 # Network
 sshuttle
 # Shell
