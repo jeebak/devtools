@@ -343,7 +343,7 @@ if is_mac; then
   fi
 fi
 # -- OVERVIEW OF CHANGES THAT WILL BE MADE ------------------------------------
-get_conf "all-systems-go-$(is_mac && echo mac; is_linux && echo linux)"
+get_conf "all-systems-go"
 
 # shellcheck disable=SC2034
 read -r -p "Hit [enter] to start or control-c to quit: " dummy
@@ -1194,21 +1194,20 @@ EOT
 # chicken/egg issue w/ gcc / glibc
 # End: system-requirement-linux
 # -----------------------------------------------------------------------------
-# Start: all-systems-go-mac
+# Start: all-systems-go
 cat <<EOT
 
 OK. It looks like we're ready to go.
 *******************************************************************************
-***** NOTE: This script assumes a "pristine" installation of El Capitan,  *****
-***** [High] Sierra, or Mojave If you've already made changes to files in *****
+***** NOTE: This script assumes a "pristine" installation of macOS        *****
+***** (El Capitan, [High] Sierra, or Mojave,) or Fedora, Manjaro, Mint,   *****
+***** or Ubuntu Linux. If you've already made changes to files under      *****
 ***** /etc, then all bets are off. You have been WARNED!                  *****
 *******************************************************************************
 If you wish to continue, then this is what I'll be doing:
   - Git-ifying your /etc folder
-  - Allow for password-less sudo by altering /etc/sudoers
-  - Install home brew, and some brew packages
-  - Update the System Ruby Gem, and install some gems
-  - Install some npm packages
+  - Allow for password-less sudo by altering /etc/sudoers*
+  - Install home (or linux) brew, and some brew packages
   -- Configure:
     - Postfix (Disable outgoing mail)
     - MariaDB (InnoDB tweaks, etc.)
@@ -1217,35 +1216,14 @@ If you wish to continue, then this is what I'll be doing:
       - ServerAlias for *.nip.io, *.xip.io for <anything>.<IP Address>.nip.io
         *.localhost.metaltoad-sites.com, *.lvh.me, and *.vcap.me for localhost]
     - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
+  - Install some Ruby gems
+  - Install some Node npm packages
+  -- On Linux:
+    - Install Python  (via 'pyenv')             and install some pips
+    - Install Ruby    (via 'rbenv/ruby-build')  and install some gems
+    - Install NodeJs  (via 'n/n-install')       and install some npm packages
 EOT
-# End: all-systems-go-mac
-# -----------------------------------------------------------------------------
-# Start: all-systems-go-linux
-cat <<EOT
-
-OK. It looks like we're ready to go.
-*******************************************************************************
-***** NOTE: This script assumes a "pristine" installation of Ubuntu,      *****
-***** If you've already made changes to files in /etc, then all bets      *****
-***** are off. You have been WARNED!                                      *****
-*******************************************************************************
-If you wish to continue, then this is what I'll be doing:
-  - Git-ifying your /etc folder with etckeeper
-  - Allow for password-less sudo by adding /etc/sudoers.d/10-local-users
-  - Install linux brew, and some brew packages
-  - Install Python  (via 'pyenv')             and install some pips
-  - Install Ruby    (via 'rbenv/ruby-build')  and install some gems
-  - Install NodeJs  (via 'n/n-install')       and install some npm packages
-  -- Configure:
-    - Postfix (Disable outgoing mail)
-    - MariaDB (InnoDB tweaks, etc.)
-    - Php.ini (Misc. configurations)
-    - Apache2 (Enable modules, and add wildcard vhost conf) [including
-      - ServerAlias for *.nip.io, *.xip.io for <anything>.<IP Address>.nip.io
-        *.localhost.metaltoad-sites.com, *.lvh.me, and *.vcap.me for localhost]
-    - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
-EOT
-# End: all-systems-go-linux
+# End: all-systems-go
 # -----------------------------------------------------------------------------
 # Start: mysqld_innodb.cnf
 cat <<EOT
