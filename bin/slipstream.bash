@@ -160,7 +160,16 @@ function process() {
         fi
         rm -rf "$BREW_PREFIX/share/${line/php/pear}"
 
-        brew install "${line[@]}"
+        # Quick hack to get around this issue with building the memcached PECL
+        #   checking for sasl/sasl.h... no
+        #   configure: error: no, sasl.h is not available. Run configure with --disable-memcached-sasl to disable this check
+        #   ERROR: `/tmp/pear/temp/memcached/configure --with-php-config=/home/linuxbrew/.linuxbrew/opt/php/bin/php-config --with-libmemcached-dir=no' failed
+        if is_linux && [[ "$line" = "libmemcached" ]]; then
+          brew reinstall --build-from-source "${line[@]}"
+        else
+          brew install "${line[@]}"
+        fi
+
         brew link --overwrite --force "$line"
 
         show_status "Installing PECLs for: $line"
