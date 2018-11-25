@@ -36,6 +36,10 @@ function is_linux() {
   [[ $OSTYPE == linux* ]]
 }
 
+function is_fedora() {
+  [[ -f /etc/os-release  ]] && qt grep -i fedora /etc/os-release
+}
+
 function is_mageia() {
   [[ -f /etc/lsb-release ]] && qt grep -i mageia /etc/lsb-release
 }
@@ -469,8 +473,9 @@ if is_linux; then
 
   case "$pkg_manager" in
     'dnf'|'pacman')
-      if ! qt 'default_transport = error: outside mail is not deliverable' /etc/postfix/main.cf; then
-        # TODO: figure out configuration for mageia. the restart fixed this for fedora
+      # Fedora works fine w/out any further configuration. Quick check to skip if is_fedora
+      if ! is_fedora && ! qt 'default_transport = error: outside mail is not deliverable' /etc/postfix/main.cf; then
+        # TODO: figure out configuration for mageia. the systemctl restart fixed the postdrop warning for fedora
         sudo sed -i.bak "s;^#myhostname = host.domain.tld\$;myhostname = localhost;"  /etc/postfix/main.cf
         sudo sed -i.bak "s;^#mydomain = domain.tld\$;mydomain = localdomain;"         /etc/postfix/main.cf
 
@@ -483,7 +488,7 @@ if is_linux; then
           sudo sed -i.bak "s;#.*${i}\$;${i};" /etc/postfix/main.cf
         done
 
-        cat <<EOT | sudo tee -a /etc/postfix/main.cf
+        cat <<EOT | qt sudo tee -a /etc/postfix/main.cf
 
 default_transport = error: outside mail is not deliverable
 EOT
@@ -516,6 +521,7 @@ fi
 
 qt pushd /etc/
 if sudo git status | qt grep -E 'postfix/main.cf|postfix/virtual'; then
+  sudo rm -f /etc/postfix/main.cf.bak
   etc_git_commit "git add postfix/main.cf postfix/virtual" "Disable outgoing mail (postfix tweaks)"
 fi
 qt popd
