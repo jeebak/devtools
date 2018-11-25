@@ -96,11 +96,10 @@ if is_mac; then
     exit 127
   fi
 elif is_linux; then
-  # openSUSE has both zypper and apt-get
-  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v zypper)")"
-  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v apt-get)")"
+  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v apt)")"
   [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v dnf)")"
   [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v pacman)")"
+  [[ -z "$pkg_manager" ]] && pkg_manager="$(basename "$(command -v zypper)")"
 
   if [[ -z "$pkg_manager" ]]; then
     get_conf "system-requirement-linux"
@@ -132,7 +131,7 @@ function process() {
 
     read -r -a line <<< "$(grep -E "^${line}[ ]*.*$" <(clean <(get_pkgs "$1")))"
     case "$1" in
-      'apt-get'|'dnf'|'zypper')
+      'apt'|'dnf'|'zypper')
         sudo "$1" install -y "${line[@]}"
         ;;
       'brew tap')
@@ -238,7 +237,7 @@ function process() {
 # Get list of installed packages
 function get_installed() {
   case "$1" in
-    'apt-get')
+    'apt')
       qte apt list --installed | sed 's;/.*$;;' | sort -u
       ;;
     'brew cask')
@@ -364,10 +363,10 @@ if [[ ! -f /etc/.git/config ]]; then
 
   if is_linux; then
     case "$pkg_manager" in
-      'apt-get')
-        sudo apt-get update
+      'apt')
+        sudo apt update
         # apt-cache depends etckeeper
-        sudo apt-get install -y etckeeper
+        sudo apt install -y etckeeper
         ;;
       'dnf')
         # Mageia has neither sudo nor git in base installation
@@ -448,15 +447,15 @@ POSTFIX_CONF="/etc/postfix/main.cf"
 # Macs have postfix available by default
 if is_linux; then
   case "$pkg_manager" in
-    'apt-get')
+    'apt')
       if ! qte debconf-show postfix | grep '^\*' | qt grep 'postfix/mailname:'; then
         sudo debconf-set-selections <<< "postfix postfix/mailname string $(hostname)"
       fi
       if ! qte debconf-show postfix | grep '^\*' | qt grep 'postfix/main_mailer_type:'; then
         sudo debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
       fi
-      # apt-get is the only one that requires config before install-ing
-      sudo apt-get install -y bsd-mailx postfix
+      # apt is the only one that requires config before install-ing
+      sudo apt install -y bsd-mailx postfix
       ;;
     'dnf'|'pacman')
       # Fedora works fine w/out any further configuration. Quick check to skip if is_fedora
@@ -970,18 +969,15 @@ process "npm"
 get_conf "slipstream" > "$DEST_DIR/slipstream/webroot/index.php"
 "$(command -v xdg-open || command -v open)" http://slipstream.localhost/
 # -----------------------------------------------------------------------------
-# We're done! Now,...
-# clean_up (called automatically, since we're trap-ing EXIT signal)
-
-# This is necessary to allow for the .data section(s)
+# We're done! Now, # clean_up (called automatically, since we're trap-ing EXIT
+# signal.) The explicit exit is necessary to allow for the .data section(s)
 exit
-
 # -- LIST OF PACKAGES TO INSTALL ----------------------------------------------
 # .data
 # -----------------------------------------------------------------------------
-# TODO: revisit: apt-get, dnf, pacman, and zypper dependencies. they were added
+# TODO: revisit: apt, dnf, pacman, and zypper dependencies. they were added
 # before the "brew build-essential" group was added
-# Start: apt-get
+# Start: apt
 build-essential
 curl
 default-jdk
@@ -994,7 +990,7 @@ libffi-dev
 libsqlite3-dev
 libssl-dev
 zlib1g-dev
-# End: apt-get
+# End: apt
 # -----------------------------------------------------------------------------
 # Start: dnf
 dnsmasq
@@ -1161,7 +1157,7 @@ EOT
 cat <<EOT
 Sorry! This script is currently only compatible with:
 
-  apt-get based distributions, tested on:
+  apt based distributions, tested on:
 
     Mint >= 19.1
     Xubuntu >= 18.04
