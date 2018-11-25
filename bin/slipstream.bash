@@ -176,7 +176,6 @@ function process() {
         brew link --overwrite --force "$line"
 
         show_status "Installing PECLs for: $line"
-
         if [[ -x "$BREW_PREFIX/opt/$line/bin/pecl" ]]; then
           "$BREW_PREFIX/opt/$line/bin/pecl" channel-update pecl.php.net
 
@@ -982,8 +981,6 @@ build-essential
 curl
 default-jdk
 git
-# For linuxbrew php
-libsasl2-dev
 # For pyenv and/or rbenv
 libbz2-dev
 libffi-dev
@@ -998,9 +995,6 @@ java-1.8.0-openjdk
 mailx
 make
 postfix
-# For linuxbrew php
-cyrus-sasl-devel
-# TODO: mageia, tried: lib64sasl2-devel instead, and still failed
 # For pyenv and/or rbenv
 libffi-devel
 zlib-devel
@@ -1026,6 +1020,8 @@ binutils
 gcc
 linux-headers
 pkg-config
+# This contains sasl/sasl.h, which the memcached PECL needs to compile
+libsasl2
 # End: brew build-essential
 # -----------------------------------------------------------------------------
 # Start: brew tap
