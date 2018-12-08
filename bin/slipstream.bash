@@ -148,7 +148,8 @@ function process() {
         [[ -z "$BREW_PREFIX" ]] && die "Brew is either not yet installed, or \$BREW_PREFIX not yet set" 127
 
         brew_php_linked="$(if qte cd "$BREW_PREFIX/var/homebrew/linked"; then qte ls -d php php@[57].[0-9]* || true; fi)"
-        num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+' || true)"
+        # Using qte for "Error: Broken pipe" which only seems to occur under Linux
+        num_ver="$(grep -E -o '[0-9]+\.[0-9]+' <<< "$line" || qte brew info php | head -1 | grep -E -o '[0-9]+\.[0-9]+' || true)"
 
         if [[ ! -z "$brew_php_linked" ]]; then
           if [[ "$line" != "$brew_php_linked" ]]; then
@@ -437,6 +438,24 @@ $USER ALL=(ALL) NOPASSWD:ALL
 EOT
     sudo chmod 640 /etc/sudoers.d/10-local-users
     etc_git_commit "git add /etc/sudoers.d/10-local-users" "Password-less sudo for '$USER'"
+  fi
+fi
+# -- Error: ENOSPC  -----------------------------------------------------------
+# https://stackoverflow.com/questions/22475849/node-js-what-is-enospc-error-and-how-to-solve
+if is_linux; then
+  # Arch Linux
+  if [[ -f /etc/sysctl.d/99-sysctl.conf ]]; then
+    conffile="/etc/sysctl.d/99-sysctl.conf"
+    sysctl_options="-p"
+  else
+    conffile="/etc/sysctl.conf"
+    sysctl_options="--system"
+  fi
+
+  if ! qt grep fs.inotify.max_user_watches "$conffile"; then
+    echo fs.inotify.max_user_watches=524288 | sudo tee -a "$conffile"
+    sudo sysctl $sysctl_options
+    sudo etckeeper commit -m 'Fix: ENOSPC error'
   fi
 fi
 # -- DISABLE OUTGOING MAIL ----------------------------------------------------
