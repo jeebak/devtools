@@ -1077,7 +1077,6 @@ imagemagick
 libmemcached
 memcached
 php
-php@5.6
 php@7.1
 php@7.2
 # End: brew php
@@ -1090,8 +1089,8 @@ php@7.2
 #   end if
 igbinary
 imagick
-memcached:php@5.6-2.2.0
-xdebug:php@5.6-2.5.5
+memcached
+xdebug
 # End: pecl
 # -----------------------------------------------------------------------------
 # Start: brew leaves
