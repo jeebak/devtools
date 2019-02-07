@@ -47,13 +47,13 @@ function is_mageia() {
   [[ -f /etc/lsb-release ]] && qt grep -i mageia /etc/lsb-release
 }
 # -- CHECKS RUNNING IN BASH ---------------------------------------------------
-INVOKED_AS="$(basename "$BASH")"
+INVOKED_AS="${BASH##*/}"
 if [[ -z "$INVOKED_AS" ]] || [[ "$INVOKED_AS" != 'bash' ]]; then
   die "Please invoke this script thusly: bash $0" 127
 fi
 # -- DON'T RUN AS SUDO --------------------------------------------------------
 if [[ $UID -eq 0 ]]; then
-  if [[ ! -z "$SUDO_USER" ]]; then
+  if [[ -n "$SUDO_USER" ]]; then
     cat <<EOT
 It looks like you're running this script via sudo.
 That's OK. I'll re-run it as: $SUDO_USER
