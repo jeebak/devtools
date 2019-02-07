@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# basename: "${var##*/}"
+#  dirname: "${var%/*}"
+
 # https://gist.github.com/waylan/4080362
 # drush sql-create --db-su=root --db-su-pw=root  ${PWD##/*/} | sed 's/-//g')
 

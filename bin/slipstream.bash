@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# basename: "${var##*/}"
+#  dirname: "${var%/*}"
+
 set -eo pipefail
 
 # -- HELPER FUNCTIONS, PT. 1 --------------------------------------------------
