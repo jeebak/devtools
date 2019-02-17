@@ -611,8 +611,7 @@ show_status "== Processing Apache =="
 #   sudo launchctl unload -w /System/Library/LaunchDaemons/org.apache.httpd.plist
 # fi
 
-APACHE_BASE="/etc/apache2"
-is_linux && APACHE_BASE="$BREW_PREFIX/etc/httpd"
+APACHE_BASE="$BREW_PREFIX/etc/httpd"
 HTTPD_CONF="$APACHE_BASE/httpd.conf"
 
 [[ ! -d "/var/log/apache2/" ]] && { sudo mkdir "/var/log/apache2/"; sudo chown "$USER:$(id -ng)" "/var/log/apache2/"; }
