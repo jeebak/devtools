@@ -1164,6 +1164,7 @@ If you wish to continue, then this is what I'll be doing:
     - Php.ini (Misc. configurations)
     - Apache2 (Enable modules, and add wildcard vhost conf) [including
       - ServerAlias for *.nip.io, *.xip.io for <anything>.<IP Address>.nip.io
+        *.sslip.io for <anything>.<IP Address with hypens>.sslip.io
         *.localhost.metaltoad-sites.com, *.lvh.me, and *.vcap.me for localhost]
     - Dnsmasq (Resolve *.localhost domains w/OUT /etc/hosts editing)
   - Install some Ruby gems
@@ -1208,7 +1209,7 @@ EOT
 cat <<EOT
 <VirtualHost *:80>
   ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io *.nip.io *.lvh.me *.vcap.me
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io *.sslip.io *.nip.io *.lvh.me *.vcap.me
   VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   UseCanonicalName Off
@@ -1250,7 +1251,7 @@ cat <<EOT
 Listen 443
 <VirtualHost *:443>
   ServerAdmin $USER@localhost
-  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io *.nip.io *.lvh.me *.vcap.me
+  ServerAlias *.localhost *.vmlocalhost *.localhost.metaltoad-sites.com *.xip.io *.sslip.io *.nip.io *.lvh.me *.vcap.me
   VirtualDocumentRoot $DEST_DIR/%1/webroot
 
   SSLEngine On
@@ -1326,6 +1327,7 @@ cat <<EOT
   print '<p>[test ' . \$prefix . 'SSL: <a href="' . \$url . '">' . \$url . '</a>]</p>';
 
   \$my_ip = getHostByName(getHostName());
+  \$my_ip_hyphens = str_replace('.', '-', \$my_ip);
 
   \$link = @mysqli_connect('127.0.0.1', 'root', 'root', 'mysql');
   \$mysqli_status = \$link ? mysqli_stat(\$link) : mysqli_connect_error();
@@ -1349,6 +1351,7 @@ cat <<EOT
     <li>http://your-website.vcap.me/</li>
     <li>http://your-website.<?php echo \$my_ip; ?>.nip.io/</li>
     <li>http://your-website.<?php echo \$my_ip; ?>.xip.io/</li>
+    <li>http://your-website.<?php echo \$my_ip_hyphens; ?>.sslip.io/</li>
   </ul>
   automatically.
 </p>
