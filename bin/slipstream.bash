@@ -1058,6 +1058,12 @@ php-cs-fixer
 pngcrush
 the_silver_searcher
 wp-cli
+# For pyenv and/or rbenv
+zlib
+# export LDFLAGS="-L/usr/local/opt/zlib/lib"
+# export CPPFLAGS="-I/usr/local/opt/zlib/include"
+# Python sqlite3 extension missing?
+# CFLAGS="-I$(xcrun --show-sdk-path)/usr/include" pyenv install -v
 # End: brew leaves
 # -----------------------------------------------------------------------------
 # Start: brew leaves-mac
