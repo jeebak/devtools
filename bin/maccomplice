@@ -142,21 +142,11 @@ function accpl.__reload_plist() {
   fi
 }
 
-function accpl.ra() {
-  die "Restart Apache (ra) moved to accomplice" 127
-}
+# System Helper Subcommands:
 
 function accpl.rd() {
   accpl.__reload_plist '/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist'
   accpl.__verbose_run sudo killall -HUP mDNSResponder
-}
-
-function accpl.rm() {
-  die "Restart MariaDB/MySQL moved to accomplice" 127
-}
-
-function accpl.rp() {
-  die "Restart PHP-FPM (rp) moved to accomplice" 127
 }
 
 # http://www.thxbye.de/mac/mac-restarting-the-mac-os-x-dock-finder-spaces-or-menubar.html
@@ -166,6 +156,11 @@ function accpl.rdk() {
 
 function accpl.rf() {
   accpl.__ka Finder
+}
+
+function accpl.rl() {
+  # Hmm... "supposed" to be called w/ "-w" option. Just noting it for now.
+  accpl.__reload_plist '/System/Library/LaunchDaemons/com.apple.locate.plist'
 }
 
 function accpl.rmb() {
@@ -178,11 +173,6 @@ function accpl.raud() {
 
 function accpl.rcam() {
   accpl.__verbose_run sudo killall -KILL VDCAssistant
-}
-
-function accpl.rl() {
-  # Hmm... "supposed" to be called w/ "-w" option. Just noting it for now.
-  accpl.__reload_plist '/System/Library/LaunchDaemons/com.apple.locate.plist'
 }
 
 function accpl.th() {
@@ -202,42 +192,6 @@ function accpl.fh() {
 function accpl.famf() {
     accpl.__adw finder NewWindowTarget PfAF
     #accpl.__adw finder NewWindowTargetPath file:///System/Library/CoreServices/Finder.app/Contents/Resources/MyLibraries/myDocuments.cannedSearch
-}
-
-function accpl.caff() {
-  errcho "Control-c to cancel"
-  accpl.__verbose_run caffeinate "$@"
-}
-
-function accpl.os() {
-  accpl.__verbose_run sudo opensnoop "$@"
-}
-
-function accpl.gifify() {
-  # Based on: https://gist.github.com/SlexAxton/4989674
-  #   https://gist.github.com/SlexAxton/4989674#comment-1199058
-  local FFMPEG CONVERT GIFSICLE output_file maxsize tmp_prefix="/tmp/gifify-tmp-$$"
-
-  [[ -z "$1" ]]   && die "$(tput setaf 1)No input file given. Example: gifify example.mov [max width (pixels)]$(tput sgr 0)" 1
-  [[ ! -f "$1" ]] && die "$(tput setaf 1)Input file: $1 does NOT exist!$(tput sgr 0)" 1
-
-  FFMPEG="$(  command -v ffmpeg || command -v avconf)"  || { die "ffmpeg not found!"    1; }
-  CONVERT="$( command -v convert)"                      || { die "convert not found!"   1; }
-  GIFSICLE="$(command -v gifsicle)"                     || { die "gifsicle not found!"  1; }
-
-  output_file="${1%.*}.gif"
-  [[ -f "$output_file" ]] && die "$output_file already exists!" 1
-  [[ ! -z "$2" ]] && maxsize="-vf scale=$2:-1" || maxsize=""
-
-  errcho "$(tput setaf 2)Creating \"$output_file\"...$(tput sgr 0)"
-  "$FFMPEG" -loglevel panic -i "$1" $maxsize -r 10 -vcodec png "${tmp_prefix}-%05d.png"
-  "$CONVERT" +dither -layers Optimize "${tmp_prefix}"-*.png GIF:- | "$GIFSICLE" --no-warnings --colors 256 --delay=10 --loop --optimize=3 --multifile - > "$output_file"
-  rm "${tmp_prefix}"-*.png
-  errcho "$(tput setaf 2)Done: $output_file$(tput sgr 0)"
-}
-
-function accpl.sl() {
-  accpl.__verbose_run mdfind -name "$@"
 }
 
 function accpl.tellit() {
@@ -294,6 +248,15 @@ if startIt then
 end if"
 }
 
+function accpl.caff() {
+  errcho "Control-c to cancel"
+  accpl.__verbose_run caffeinate "$@"
+}
+
+function accpl.os() {
+  accpl.__verbose_run sudo opensnoop "$@"
+}
+
 function accpl.pl() {
   for i in "$@"; do
     accpl.__verbose_run plutil -convert xml1 -o - "$i"
@@ -310,28 +273,31 @@ function accpl.ql() {
   qlmanage -p "$@"
 }
 
-function accpl.bcmd() {
-  die "Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd) moved to accomplice" 127
+function accpl.gifify() {
+  # Based on: https://gist.github.com/SlexAxton/4989674
+  #   https://gist.github.com/SlexAxton/4989674#comment-1199058
+  local FFMPEG CONVERT GIFSICLE output_file maxsize tmp_prefix="/tmp/gifify-tmp-$$"
+
+  [[ -z "$1" ]]   && die "$(tput setaf 1)No input file given. Example: gifify example.mov [max width (pixels)]$(tput sgr 0)" 1
+  [[ ! -f "$1" ]] && die "$(tput setaf 1)Input file: $1 does NOT exist!$(tput sgr 0)" 1
+
+  FFMPEG="$(  command -v ffmpeg || command -v avconf)"  || { die "ffmpeg not found!"    1; }
+  CONVERT="$( command -v convert)"                      || { die "convert not found!"   1; }
+  GIFSICLE="$(command -v gifsicle)"                     || { die "gifsicle not found!"  1; }
+
+  output_file="${1%.*}.gif"
+  [[ -f "$output_file" ]] && die "$output_file already exists!" 1
+  [[ -n "$2" ]] && maxsize="-vf scale=$2:-1" || maxsize=""
+
+  errcho "$(tput setaf 2)Creating \"$output_file\"...$(tput sgr 0)"
+  "$FFMPEG" -loglevel panic -i "$1" $maxsize -r 10 -vcodec png "${tmp_prefix}-%05d.png"
+  "$CONVERT" +dither -layers Optimize "${tmp_prefix}"-*.png GIF:- | "$GIFSICLE" --no-warnings --colors 256 --delay=10 --loop --optimize=3 --multifile - > "$output_file"
+  rm "${tmp_prefix}"-*.png
+  errcho "$(tput setaf 2)Done: $output_file$(tput sgr 0)"
 }
 
-function accpl.buu() {
-  die "Run: brew update --verbose; brew upgrade --verbose; brew cleanup -n -s moved to accomplice" 127
-}
-
-function accpl.bdeps() {
-  die "Runs: brew deps (dependencis,) on list of installed brews moved to accomplice" 127
-}
-
-function accpl.buses() {
-  die "Runs: brew uses --installed, on list of installed brews moved to accomplice" 127
-}
-
-function accpl.sphp() {
-  die "Switch php (sphp) moved to accomplice" 127
-}
-
-function accpl.cgu() {
-  die "Run: composer global update moved to accomplice" 127
+function accpl.sl() {
+  accpl.__verbose_run mdfind -name "$@"
 }
 
 function accpl.hda() {
@@ -352,6 +318,44 @@ function accpl.hdr() {
 
 function accpl.vv() {
   accpl.__verbose_run diskutil  verifyvolume "$1"
+}
+
+# Deprecated
+
+function accpl.bcmd() {
+  die "Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd) moved to accomplice" 127
+}
+
+function accpl.bdeps() {
+  die "Runs: brew deps (dependencis,) on list of installed brews moved to accomplice" 127
+}
+
+function accpl.buses() {
+  die "Runs: brew uses --installed, on list of installed brews moved to accomplice" 127
+}
+
+function accpl.buu() {
+  die "Run: brew update --verbose; brew upgrade --verbose; brew cleanup -n -s moved to accomplice" 127
+}
+
+function accpl.cgu() {
+  die "Run: composer global update moved to accomplice" 127
+}
+
+function accpl.ra() {
+  die "Restart Apache (ra) moved to accomplice" 127
+}
+
+function accpl.rm() {
+  die "Restart MariaDB/MySQL moved to accomplice" 127
+}
+
+function accpl.rp() {
+  die "Restart PHP-FPM (rp) moved to accomplice" 127
+}
+
+function accpl.sphp() {
+  die "Switch php (sphp) moved to accomplice" 127
 }
 
 # "main()" if not "source"-d
