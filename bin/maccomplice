@@ -5,8 +5,6 @@
 
 # https://gist.github.com/waylan/4080362
 
-brew_prefix="$(brew --prefix)"
-
 # Echo to strerr
 function errcho() {
   # echo to strerr
@@ -77,16 +75,6 @@ Usage: $accpl_self <subcommand> [options]
 
     vv        Run: diskutil verifyvolume \$1
                   # \$1=/path/to/mountpoint
-  Homebrew Helper Subcommands: poorly documented, and sequences of commands
-    bcmd      Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd)
-    buu       Run: brew update --verbose; brew upgrade --all; brew cleanup -n -s
-    bdeps     Runs: brew deps (dependencis,) on list of installed brews
-    buses     Runs: brew uses --installed, on list of installed brews
-    penmod    Enable:  Brew PHP $brew_prefix/etc/php/*/conf.d/ext-\$@.conf
-    pdismod   Disable: Brew PHP $brew_prefix/etc/php/*/conf.d/ext-\$@.conf
-
-  Misc.
-    cgu       Run: composer global update
 
 EOT
 }
@@ -127,10 +115,6 @@ function accpl.__adr() {
 # Apple Defaults Toggle
 function accpl.__adt() {
   accpl.__adw "$@" -bool "$([[ "$(accpl.__adr "$@")" =~ 1|yes|YES|true|TRUE ]] && echo NO || echo YES)"
-}
-
-function accpl.__brew() {
-  accpl.__verbose_run brew "$@"
 }
 
 function accpl.__hdiutil() {
@@ -327,82 +311,27 @@ function accpl.ql() {
 }
 
 function accpl.bcmd() {
-  accpl.__brew commands
+  die "Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd) moved to accomplice" 127
 }
 
 function accpl.buu() {
-  accpl.__brew update --verbose
-  accpl.__brew cask update --verbose
-  accpl.__brew upgrade --all
-  accpl.__brew cleanup -n -s # Dry-run
+  die "Run: brew update --verbose; brew upgrade --verbose; brew cleanup -n -s moved to accomplice" 127
 }
 
-# Inspiredb by: http://zanshin.net/2014/02/03/how-to-list-brew-dependencies/
 function accpl.bdeps() {
-  local formula
-
-  while read -r formula; do
-    # shellcheck disable=SC2154
-    echo "${yellow}${formula}:${magenta} $(brew deps "$formula") ${reset_colors}"
-  done <<< "$({ [[ $# -ne 0 ]] && echo "$@" | tr ' ' '\n'; } || brew list)"
+  die "Runs: brew deps (dependencis,) on list of installed brews moved to accomplice" 127
 }
 
 function accpl.buses() {
-  local formula
-
-  while read -r formula; do
-    # shellcheck disable=SC2154
-    echo "${yellow}${formula}:${magenta} $(brew uses --installed "$formula") ${reset_colors}"
-  done <<< "$({ [[ $# -ne 0 ]] && echo "$@" | tr ' ' '\n'; } || brew list)"
+  die "Runs: brew uses --installed, on list of installed brews moved to accomplice" 127
 }
 
 function accpl.sphp() {
   die "Switch php (sphp) moved to accomplice" 127
 }
 
-function accpl.penmod() {
-  local mod target ini
-
-  for mod in "$@"; do
-    for ini in /etc/homebrew/etc/php/*/conf.d/ext-${mod}.ini; do
-      target="${ini/\/etc\/homebrew/$brew_prefix}"
-
-      if [[ ! -e "$target" ]]; then
-        ln -svf "$ini" "$target"
-      elif [[ "$(readlink "$target")" =~ ^/etc/homebrew/etc/php/ ]]; then
-        errcho "$target is already symlink-ed. Skipping."
-      else
-        errcho "$target is already symlink-ed elsewhere. Skipping"
-      fi
-    done
-  done
-
-  accpl.ra
-}
-
-function accpl.pdismod() {
-  local mod target ini
-
-  for mod in "$@"; do
-    for ini in $brew_prefix/etc/php/*/conf.d/ext-${mod}.ini; do
-      target="$(readlink "$ini")"
-
-      if [[ -z "$target" ]]; then
-        errcho "$ini is not a symlink. Skipping."
-      elif [[ "$target" =~ ^/etc/homebrew/etc/php/ ]]; then
-        errcho rm -f "$ini"
-        rm -f "$ini"
-      else
-        errcho "$ini is symlink-ed elsewhere. Skipping"
-      fi
-    done
-  done
-
-  accpl.ra
-}
-
 function accpl.cgu() {
-  accpl.__verbose_run composer global update
+  die "Run: composer global update moved to accomplice" 127
 }
 
 function accpl.hda() {

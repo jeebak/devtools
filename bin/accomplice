@@ -34,6 +34,9 @@ accpl_self="${0##/*/}"
 destdir="$(grep -E -o '[^/]+/[^/]*$' <<< "${0%/bin/$accpl_self}")"
 confdir="${XDG_CONFIG_HOME:-$HOME/.config}/$destdir"
 
+# shellcheck source=/dev/null
+[[ -f "${0%/*}/../lib/bash/colors.sh" ]] && source "${0%/*}/../lib/bash/colors.sh"
+
 function accpl.help() {
   cat <<EOT
 Usage: $accpl_self <subcommand> [options]
@@ -90,10 +93,16 @@ Usage: $accpl_self <subcommand> [options]
                 - OR - as provided as parameters
     genssl    Generate Self-signed SSL Certs (server.{crt,csr,key}, or specify name)
 
+  Homebrew Helper Subcommands: poorly documented, and sequences of commands
+    bcmd      Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd)
+    buu       Run: brew update --verbose; brew upgrade --verbose; brew cleanup -n -s
+    bdeps     Runs: brew deps (dependencis,) on list of installed brews
+    buses     Runs: brew uses --installed, on list of installed brews
+
   Misc. Helper Subcommands:
+    cgu       Run: composer global update
     ssh       Ssh's to ssh_options[:user]@#{gateway} from Capfile, based on current
               git branch
-
     exam      Examine archive files (list contents, good idea to run 1st, before...)
     ex        Extract archive files (NOTE: contents may not all be contained in a
                 folder and may litter your \$PWD)
@@ -313,6 +322,10 @@ function accpl.__run_compass() {
 function accpl.__verbose_run() {
   errcho "Running: $*"
   "$@"
+}
+
+function accpl.__brew() {
+  accpl.__verbose_run brew "$@"
 }
 
 function accpl.run_query() {
@@ -1226,7 +1239,40 @@ function accpl.els() {
   fi
 }
 
+function accpl.bcmd() {
+  accpl.__brew commands
+}
+
+function accpl.buu() {
+  accpl.__brew update --verbose
+  accpl.__brew upgrade --verbose
+  accpl.__brew cleanup -n -s # Dry-run
+}
+
+# Inspiredb by: http://zanshin.net/2014/02/03/how-to-list-brew-dependencies/
+function accpl.bdeps() {
+  local formula
+
+  while read -r formula; do
+    # shellcheck disable=SC2154
+    echo "${yellow}${formula}:${magenta} $(brew deps "$formula") ${reset_colors}"
+  done <<< "$({ [[ $# -ne 0 ]] && echo "$@" | tr ' ' '\n'; } || brew list)"
+}
+
+function accpl.buses() {
+  local formula
+
+  while read -r formula; do
+    # shellcheck disable=SC2154
+    echo "${yellow}${formula}:${magenta} $(brew uses --installed "$formula") ${reset_colors}"
+  done <<< "$({ [[ $# -ne 0 ]] && echo "$@" | tr ' ' '\n'; } || brew list)"
+}
+
 # Misc. Helper Subcommands:
+
+function accpl.cgu() {
+  accpl.__verbose_run composer global update
+}
 
 function accpl.ssh() {
   local branch cap_conf SSH user gateway
