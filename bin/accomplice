@@ -204,9 +204,9 @@ function accpl.__get_cred() {
   if [[ -r "$destfile" ]]; then
     cred="$(cat "$destfile")"
   else
-    [[ ! -z "$3" ]] && stty -echo
+    [[ -n "$3" ]] && stty -echo
     read -r -p "$userprompt " cred
-    [[ ! -z "$3" ]] && stty echo
+    [[ -n "$3" ]] && stty echo
     echo "$cred" > "$destfile" && chmod 600 "$destfile"
   fi
 
@@ -444,10 +444,10 @@ function accpl.__get_concrete5_root() {
   local git_root is_concrete5 concrete5_root
 
   git_root="$(accpl.__get_git_root)"
-  if [[ ! -z "$git_root" ]]; then
+  if [[ -n "$git_root" ]]; then
     # concrete5 6, 7, and 8, all seems to have this path to this file:
     is_concrete5="$(accpl.__git_ls_grep concrete/config/app.php)"
-    if [[ ! -z "$is_concrete5" ]]; then
+    if [[ -n "$is_concrete5" ]]; then
       # Strip away: concrete/config/app.php and we'll have our: concrete5_root
       concrete5_root="${is_concrete5/\/concrete\/config\/app.php/}"
     fi
@@ -482,10 +482,10 @@ function accpl.__get_drupal_root() {
   local git_root is_drupal drupal_root
 
   git_root="$(accpl.__get_git_root)"
-  if [[ ! -z "$git_root" ]]; then
+  if [[ -n "$git_root" ]]; then
     # Drupal 6, 7, and 8, all seems to have this path to this file:
     is_drupal="$(accpl.__git_ls_grep modules/taxonomy/taxonomy.module)"
-    if [[ ! -z "$is_drupal" ]]; then
+    if [[ -n "$is_drupal" ]]; then
       # Strip away: modules/taxonomy/taxonomy.module and we'll have our: drupal_root
       # Drupal 8 path is (currently) prefixed: with core/ ... but, of course, it will
       # still fail if your version of drush doesn't support Drupal 8.
@@ -513,10 +513,10 @@ function accpl.__get_joomla_root() {
   local git_root is_joomla joomla_root
 
   git_root="$(accpl.__get_git_root)"
-  if [[ ! -z "$git_root" ]]; then
+  if [[ -n "$git_root" ]]; then
     # joomla versions all seems to have this path to this folder:
     is_joomla="$(accpl.__git_ls_grep libraries/joomla/ | head -1 | sed 's;/.*$;;')"
-    if [[ ! -z "$is_joomla" ]]; then
+    if [[ -n "$is_joomla" ]]; then
       # Strip away: libraries/joomla and we'll have our: joomla_root
       joomla_root="${is_joomla/libraries\/joomla/}"
     fi
@@ -529,10 +529,10 @@ function accpl.__get_laravel_root() {
   local git_root is_laravel laravel_root
 
   git_root="$(accpl.__get_git_root)"
-  if [[ ! -z "$git_root" ]]; then
+  if [[ -n "$git_root" ]]; then
     # Look for artisan in repo
     is_laravel="$(accpl.__git_ls_grep 'artisan$')"
-    if [[ ! -z "$is_laravel" ]]; then
+    if [[ -n "$is_laravel" ]]; then
       # Strip away: artisan and we'll have our: laravel_root
       laravel_root="${is_laravel/artisan/}"
     fi
@@ -545,10 +545,10 @@ function accpl.__get_symfony_root() {
   local git_root is_symfony symfony_root
 
   git_root="$(accpl.__get_git_root)"
-  if [[ ! -z "$git_root" ]]; then
+  if [[ -n "$git_root" ]]; then
     # Symfony seems to have this path to this file:
     is_symfony="$(accpl.__git_ls_grep app/SymfonyRequirements.php)"
-    if [[ ! -z "$is_symfony" ]]; then
+    if [[ -n "$is_symfony" ]]; then
       # Strip away: app/SymfonyRequirements.php and we'll have our: symfony_root
       symfony_root="${is_symfony/app\/SymfonyRequirements.php/}"
     fi
@@ -583,10 +583,10 @@ function accpl.__get_wordpress_root() {
   local git_root is_wordpress wordpress_root
 
   git_root="$(accpl.__get_git_root)"
-  if [[ ! -z "$git_root" ]]; then
+  if [[ -n "$git_root" ]]; then
     # wordpress 6, 7, and 8, all seems to have this path to this file:
     is_wordpress="$(accpl.__git_ls_grep wp-admin/index.php)"
-    if [[ ! -z "$is_wordpress" ]]; then
+    if [[ -n "$is_wordpress" ]]; then
       # Strip away: wp-admin/index.php and we'll have our: wordpress_root
       wordpress_root="${is_wordpress/wp-admin\/index.php/}"
     fi
@@ -675,7 +675,7 @@ function accpl.rp() {
     return
   fi
 
-  while read -r -u3 service && [[ ! -z "$service" ]]; do
+  while read -r -u3 service && [[ -n "$service" ]]; do
     stopped="$service"
     brew services stop "$stopped"
   done 3< <(brew services list | grep -E '^php[@]*[57]*' | grep ' started ' | cut -f1 -d' ')
@@ -847,39 +847,6 @@ function accpl.f() {
   accpl.run_query "FLUSH PRIVILEGES" mysql root
 }
 
-# Drupal Only: (\$dr == \$drupal_root)
-
-function accpl.si() {
-  local clean_mysql_db drush_output drupal_root
-
-  # [[ -d .git ]] && die "This is already a git repo!" 1
-  [[ -d drupal ]] || [[ -f drupal ]] && die "Drupal folder or file already exists!" 1
-
-  clean_mysql_db="$(accpl.__get_clean_mysql_db)"
-  accpl.c
-
-  drush_output="$(accpl.__call_drush dl drupal 2>&1)"
-  errcho "$drush_output"
-  drush_output="$(echo "$drush_output" | grep 'downloaded to ' | sed -e 's;^[^/]*;;' -e 's/\. .*$//')"
-
-  drupal_root="${drush_output%/*}/drupal"
-
-  mv "$drush_output" "$drupal_root"
-
-  mkdir -p "$drupal_root"/sites/all/modules/{contrib,custom,features} "$drupal_root"/sites/all/libraries
-
-  accpl.__call_drush \
-    site-install standard   \
-      --account-name=admin  \
-      --account-pass=admin  \
-      --db-url="mysql://$clean_mysql_db:$clean_mysql_db@localhost/$clean_mysql_db"
-
-  ln -svf "${drupal_root##/*/}" webroot
-  accpl.fp
-
-  # cd ${GIT_PREFIX:-.} && git init . && git add . && git commit -m 'Initial commit'
-}
-
 # CMS (Drupal/Joomla/WordPress) Helper Subcommands: (\$dr == \$drupal_root)
 
 function accpl.dump() {
@@ -969,7 +936,7 @@ function accpl.addme() {
     uid="$(grep 'User ID' <<< "$results" | sed 's/^[^:]*:[[:space:]]*//;s/[[:space:]]*$//')"
 
     errcho "$results"
-    if [[ ! -z "$uid" ]]; then
+    if [[ -n "$uid" ]]; then
       while read -r role; do
         accpl.__call_drush user-add-role "$role" "$uid"
       done <<< "$roles"
@@ -1009,6 +976,39 @@ function accpl.cw() {
   accpl.__run_compass watch
 }
 
+# Drupal Only: (\$dr == \$drupal_root)
+
+function accpl.si() {
+  local clean_mysql_db drush_output drupal_root
+
+  # [[ -d .git ]] && die "This is already a git repo!" 1
+  [[ -d drupal ]] || [[ -f drupal ]] && die "Drupal folder or file already exists!" 1
+
+  clean_mysql_db="$(accpl.__get_clean_mysql_db)"
+  accpl.c
+
+  drush_output="$(accpl.__call_drush dl drupal 2>&1)"
+  errcho "$drush_output"
+  drush_output="$(echo "$drush_output" | grep 'downloaded to ' | sed -e 's;^[^/]*;;' -e 's/\. .*$//')"
+
+  drupal_root="${drush_output%/*}/drupal"
+
+  mv "$drush_output" "$drupal_root"
+
+  mkdir -p "$drupal_root"/sites/all/modules/{contrib,custom,features} "$drupal_root"/sites/all/libraries
+
+  accpl.__call_drush \
+    site-install standard   \
+      --account-name=admin  \
+      --account-pass=admin  \
+      --db-url="mysql://$clean_mysql_db:$clean_mysql_db@localhost/$clean_mysql_db"
+
+  ln -svf "${drupal_root##/*/}" webroot
+  accpl.fp
+
+  # cd ${GIT_PREFIX:-.} && git init . && git add . && git commit -m 'Initial commit'
+}
+
 function accpl.dls() {
   local template clean_mysql_db drupal_root local_settings
 
@@ -1033,6 +1033,119 @@ function accpl.dls() {
     fi
   else
     errcho "There doesn't seem to be a $drupal_root/sites/default/ folder"
+  fi
+}
+
+function accpl.els() {
+  local drupal_root git_editor settings_file
+
+  drupal_root="$(accpl.__get_drupal_root)"
+  if [[ -f "$drupal_root/sites/default/local_settings.php" ]]; then
+    settings_file="$drupal_root/sites/default/local_settings.php"
+  elif [[ -f "$drupal_root/sites/default/settings.local.php" ]]; then
+    settings_file="$drupal_root/sites/default/settings.local.php"
+  elif [[ -f "$drupal_root/sites/default/settings.php" ]]; then
+    settings_file="$drupal_root/sites/default/settings.php"
+  fi
+
+  if [[ -n "$settings_file" ]]; then
+    git_editor="$(git config core.editor)" || git_editor="${EDITOR:-vim}"
+
+    "$git_editor" "$settings_file"
+  fi
+}
+
+function accpl.exfe() {
+  local drupal_root features_root feature
+
+  if accpl.__is_drupal; then
+    drupal_root="$(accpl.__get_drupal_root)"
+
+    feature="$(accpl.exam "$@" | tail +2 | sed 's|/.*$||' | grep -o '[^ ]*$' | sort -u)"
+    features_root="$(accpl.__git_ls_grep "/$feature/" | sed 's|/[^/]*$||' | sort -u)"
+
+    if [[ -n "$features_root" ]]; then
+      features_root="${features_root%/*}"
+    else
+      if [[ -d "$drupal_root/sites/all/modules/features" ]]; then
+        features_root="$drupal_root/sites/all/modules/features"
+      elif [[ -d "$drupal_root/sites/all/modules/custom" ]]; then
+        features_root="$drupal_root/sites/all/modules/custom"
+      elif [[ -d "$drupal_root/sites/all/modules" ]]; then
+        features_root="$drupal_root/sites/all/modules"
+      else
+        die "The $drupal_root/sites/all/modules folder doesn't seem to exist" 1
+      fi
+    fi
+  else
+    die "This doesn't seem to be a drupal project" 1
+  fi
+
+  local _pwd=$PWD
+  cd "$features_root" || exit
+
+  PREFIX=$_pwd accpl.ex "$@" && errcho "Extracted to: $features_root"
+}
+
+function accpl.dinit() {
+    local stage="prod"
+    [[ -n "$1" ]] && stage="$1"
+
+    accpl.dls
+    accpl.c
+
+    cd "$(accpl.__get_git_root)" || exit
+
+    cap "$stage" db:down
+    accpl.seed "db/default_${stage}.sql"
+
+    cap "$stage" files:pull
+    accpl.fp "$@"
+
+    gzip "db/default_${stage}.sql"
+}
+
+function accpl.cd() {
+  if accpl.__is_drupal; then
+    local DRUPAL_CLONE drupal_version drupal_root git_root TMP
+
+    DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
+    [[ ! -d "$DRUPAL_CLONE/.git" ]] && die "No drupal clone" 1
+
+    drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
+    drupal_root="$(accpl.__get_drupal_root)"
+    git_root="$(accpl.__get_git_root)"
+    TMP="/tmp/drupal-$drupal_version-$$"
+
+    mkdir -p "$TMP"
+    qt pushd "$TMP" || exit
+
+    for i in $(git --git-dir="$DRUPAL_CLONE/.git" archive "$drupal_version" | tar xvf - 2>&1 | sed 's/^x //' | grep -v '/$'); do
+      diff -U 0 -N -w "$i" "$drupal_root/$i"
+    done | tee "$git_root/core-diff.diff"
+    errcho "$(tput setaf 3)Output saved to: $(tput setaf 5)'$git_root/core-diff.diff'$(tput sgr0)"
+
+    qt popd || exit
+    rm -rf "$TMP"
+  else
+    die "This doesn't look like drupal" 1
+  fi
+}
+
+function accpl.cus() {
+  if accpl.__is_drupal; then
+    local DRUPAL_CLONE drupal_version
+
+    DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
+    [[ ! -d "$DRUPAL_CLONE/.git" ]] && die "No drupal clone" 1
+
+    drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
+    # TODO: programmaticlly determine prefix (vs. hard-coded 'drupal', and for
+    # modules folder contents not in {contrib,custom,features}
+    comm -13  <(git --git-dir="$DRUPAL_CLONE/.git" ls-tree --name-only -r "$drupal_version" | sed 's;^;drupal/;' | sort) \
+              <(git ls-tree --name-only -r HEAD | grep -v -e sites/all/modules/contrib/ -e sites/all/libraries/ | sort)
+  else
+    die "This doesn't look like drupal" 1
   fi
 }
 
@@ -1220,24 +1333,39 @@ function accpl.fp() {
   done
 }
 
-function accpl.els() {
-  local drupal_root git_editor settings_file
+function accpl.genssl() {
+  # http://www.jamescoyle.net/how-to/1073-bash-script-to-create-an-ssl-certificate-key-and-request-csr
+  # http://www.freesoftwaremagazine.com/articles/generating_self_signed_test_certificates_using_one_single_shell_script
+  # http://www.akadia.com/services/ssh_test_certificate.html
+  local domain C ST L O OU CN emailAddress password
 
-  drupal_root="$(accpl.__get_drupal_root)"
-  if [[ -f "$drupal_root/sites/default/local_settings.php" ]]; then
-    settings_file="$drupal_root/sites/default/local_settings.php"
-  elif [[ -f "$drupal_root/sites/default/settings.local.php" ]]; then
-    settings_file="$drupal_root/sites/default/settings.local.php"
-  elif [[ -f "$drupal_root/sites/default/settings.php" ]]; then
-    settings_file="$drupal_root/sites/default/settings.php"
-  fi
+  # Change to your company details
+  C=US;  ST=Oregon;  L=Portland; O=$domain; # Country, State, Locality, Organization
+  OU=IT; CN=$domain; emailAddress="$(git config user.email)"
 
-  if [[ ! -z "$settings_file" ]]; then
-    git_editor="$(git config core.editor)" || git_editor="${EDITOR:-vim}"
+  [[ -z "$1" ]] && domain=server || domain="$1"
 
-    "$git_editor" "$settings_file"
-  fi
+  # Change to your company details
+  C=US;  ST=Oregon;  L=Portland; O=$domain; # Country, State, Locality, Organization
+  OU=IT; CN=$domain; emailAddress="$(git config user.email)"
+  # Common Name, Email Address, Organizational Unit
+
+  #Optional
+  password=dummypassword
+  # Step 1: Generate a Private Key
+  openssl genrsa -des3 -passout pass:$password -out "${domain}.key" 2048 -noout
+  # Step 2: Generate a CSR (Certificate Signing Request)
+  openssl req -new -key "${domain}.key" -out "${domain}.csr" -passin pass:$password \
+    -subj "/C=$C/ST=$ST/L=$L/O=$O/OU=$OU/CN=$CN/emailAddress=$emailAddress"
+  # Step 3: Remove Passphrase from Key. Comment the line out to keep the passphrase
+  openssl rsa -in "${domain}.key" -passin "pass:$password" -out "${domain}.key"
+  # Step 4: Generating a Self-Signed Certificate
+  openssl x509 -req -days 3650 -in "${domain}.csr" -signkey "${domain}.key" -out "${domain}.crt"
+
+  ls -l "${domain}".*
 }
+
+# Homebrew Helper Subcommands: poorly documented, and sequences of commands
 
 function accpl.bcmd() {
   accpl.__brew commands
@@ -1285,93 +1413,11 @@ function accpl.ssh() {
     user="$(git grep "ssh_options\\[:user\\]" "$cap_conf" | grep -E -o "('|\")[^'\"]+('|\")" | sed 's/[^0-9a-zA-Z.-]//g')"
     # config/deploy/prod.rb:8:set :gateway, 'xxx.xxx.xxx.xxx'
     gateway="$(git grep ":gateway" "$cap_conf" | grep -E -o "('|\")[^'\"]+('|\")" | sed 's/[^0-9a-zA-Z.-]//g')"
-    [[ ! -z "$user" ]] && [[ ! -z "$gateway" ]] && SSH=ssh
+    [[ -n "$user" ]] && [[ -n "$gateway" ]] && SSH=ssh
     $SSH "$user@$gateway"
   else
     die "There doesn't seem capistrano config file for the $branch branch!" 1
   fi
-}
-
-function accpl.genssl() {
-  # http://www.jamescoyle.net/how-to/1073-bash-script-to-create-an-ssl-certificate-key-and-request-csr
-  # http://www.freesoftwaremagazine.com/articles/generating_self_signed_test_certificates_using_one_single_shell_script
-  # http://www.akadia.com/services/ssh_test_certificate.html
-  local domain C ST L O OU CN emailAddress password
-
-  # Change to your company details
-  C=US;  ST=Oregon;  L=Portland; O=$domain; # Country, State, Locality, Organization
-  OU=IT; CN=$domain; emailAddress="$(git config user.email)"
-
-  [[ -z "$1" ]] && domain=server || domain="$1"
-
-  # Change to your company details
-  C=US;  ST=Oregon;  L=Portland; O=$domain; # Country, State, Locality, Organization
-  OU=IT; CN=$domain; emailAddress="$(git config user.email)"
-  # Common Name, Email Address, Organizational Unit
-
-  #Optional
-  password=dummypassword
-  # Step 1: Generate a Private Key
-  openssl genrsa -des3 -passout pass:$password -out "${domain}.key" 2048 -noout
-  # Step 2: Generate a CSR (Certificate Signing Request)
-  openssl req -new -key "${domain}.key" -out "${domain}.csr" -passin pass:$password \
-    -subj "/C=$C/ST=$ST/L=$L/O=$O/OU=$OU/CN=$CN/emailAddress=$emailAddress"
-  # Step 3: Remove Passphrase from Key. Comment the line out to keep the passphrase
-  openssl rsa -in "${domain}.key" -passin "pass:$password" -out "${domain}.key"
-  # Step 4: Generating a Self-Signed Certificate
-  openssl x509 -req -days 3650 -in "${domain}.csr" -signkey "${domain}.key" -out "${domain}.crt"
-
-  ls -l "${domain}".*
-}
-
-function accpl.exfe() {
-  local drupal_root features_root feature
-
-  if accpl.__is_drupal; then
-    drupal_root="$(accpl.__get_drupal_root)"
-
-    feature="$(accpl.exam "$@" | tail +2 | sed 's|/.*$||' | grep -o '[^ ]*$' | sort -u)"
-    features_root="$(accpl.__git_ls_grep "/$feature/" | sed 's|/[^/]*$||' | sort -u)"
-
-    if [[ -n "$features_root" ]]; then
-      features_root="${features_root%/*}"
-    else
-      if [[ -d "$drupal_root/sites/all/modules/features" ]]; then
-        features_root="$drupal_root/sites/all/modules/features"
-      elif [[ -d "$drupal_root/sites/all/modules/custom" ]]; then
-        features_root="$drupal_root/sites/all/modules/custom"
-      elif [[ -d "$drupal_root/sites/all/modules" ]]; then
-        features_root="$drupal_root/sites/all/modules"
-      else
-        die "The $drupal_root/sites/all/modules folder doesn't seem to exist" 1
-      fi
-    fi
-  else
-    die "This doesn't seem to be a drupal project" 1
-  fi
-
-  local _pwd=$PWD
-  cd "$features_root" || exit
-
-  PREFIX=$_pwd accpl.ex "$@" && errcho "Extracted to: $features_root"
-}
-
-function accpl.dinit() {
-    local stage="prod"
-    [[ ! -z "$1" ]] && stage="$1"
-
-    accpl.dls
-    accpl.c
-
-    cd "$(accpl.__get_git_root)" || exit
-
-    cap "$stage" db:down
-    accpl.seed "db/default_${stage}.sql"
-
-    cap "$stage" files:pull
-    accpl.fp "$@"
-
-    gzip "db/default_${stage}.sql"
 }
 
 function accpl.exam() {
@@ -1399,7 +1445,7 @@ function accpl.ex() {
   fi
 
   for i in "$@"; do
-    [[ ! -z "$PREFIX" ]] && [[ $i != /* ]] && i=$PREFIX/$i
+    [[ -n "$PREFIX" ]] && [[ $i != /* ]] && i=$PREFIX/$i
     if [[ -f "$i" ]]; then
       errcho "Working on: $i"
       case "$i" in
@@ -1425,50 +1471,6 @@ function accpl.ex() {
       return 1
     fi
   done
-}
-
-function accpl.cd() {
-  if accpl.__is_drupal; then
-    local DRUPAL_CLONE drupal_version drupal_root git_root TMP
-
-    DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
-    [[ ! -d "$DRUPAL_CLONE/.git" ]] && die "No drupal clone" 1
-
-    drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
-    drupal_root="$(accpl.__get_drupal_root)"
-    git_root="$(accpl.__get_git_root)"
-    TMP="/tmp/drupal-$drupal_version-$$"
-
-    mkdir -p "$TMP"
-    qt pushd "$TMP" || exit
-
-    for i in $(git --git-dir="$DRUPAL_CLONE/.git" archive "$drupal_version" | tar xvf - 2>&1 | sed 's/^x //' | grep -v '/$'); do
-      diff -U 0 -N -w "$i" "$drupal_root/$i"
-    done | tee "$git_root/core-diff.diff"
-    errcho "$(tput setaf 3)Output saved to: $(tput setaf 5)'$git_root/core-diff.diff'$(tput sgr0)"
-
-    qt popd || exit
-    rm -rf "$TMP"
-  else
-    die "This doesn't look like drupal" 1
-  fi
-}
-
-function accpl.cus() {
-  if accpl.__is_drupal; then
-    local DRUPAL_CLONE drupal_version
-
-    DRUPAL_CLONE=$HOME/.ghq/git.drupal.org/project/drupal
-    [[ ! -d "$DRUPAL_CLONE/.git" ]] && die "No drupal clone" 1
-
-    drupal_version="$(accpl.__call_drush status drupal-version --format=list)"
-    # TODO: programmaticlly determine prefix (vs. hard-coded 'drupal', and for
-    # modules folder contents not in {contrib,custom,features}
-    comm -13  <(git --git-dir="$DRUPAL_CLONE/.git" ls-tree --name-only -r "$drupal_version" | sed 's;^;drupal/;' | sort) \
-              <(git ls-tree --name-only -r HEAD | grep -v -e sites/all/modules/contrib/ -e sites/all/libraries/ | sort)
-  else
-    die "This doesn't look like drupal" 1
-  fi
 }
 
 # "main()" if not "source"-d
