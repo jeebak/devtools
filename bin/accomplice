@@ -8,6 +8,11 @@
 
 brew_prefix="$(brew --prefix)"
 
+# Does the command exist in $PATH?
+function cmd-exists() {
+  command -v "$1" > /dev/null 2>&1
+}
+
 # Echo to strerr
 function errcho() {
   # echo to strerr
@@ -94,6 +99,7 @@ Usage: $accpl_self <subcommand> [options]
     genssl    Generate Self-signed SSL Certs (server.{crt,csr,key}, or specify name)
 
   Homebrew Helper Subcommands: poorly documented, and sequences of commands
+    bbott     Reinstall with bottles, if available
     bcmd      Run: brew commands (\$HOMEBREW_PREFIX/Library/Homebrew/cmd)
     buu       Run: brew update --verbose; brew upgrade --verbose; brew cleanup -n -s
     bdeps     Runs: brew deps (dependencis,) on list of installed brews
@@ -1366,6 +1372,25 @@ function accpl.genssl() {
 }
 
 # Homebrew Helper Subcommands: poorly documented, and sequences of commands
+
+function accpl.bbott() {
+  local line src_path formula
+
+  cmd-exists jq || die "jq command not found" 127
+
+  while read -r line; do
+    if [ "$(jq .poured_from_bottle "$line")" = "false" ]; then
+      src_path="$(jq .source.path "$line" | sed 's/"//g')"
+      [[ -f "$src_path" ]] || die "$src_path does not exist" 1
+      formula="$(basename "$src_path" ".rb")"
+      echo "Checking: $line"
+      # TODO: figure out how to get arch (x86_64_linux)
+      if grep -q -E 'sha256 "[a-z0-9]+" => :x86_64_linux' "$src_path"; then
+        brew reinstall "$formula"
+      fi
+    fi
+  done < <(find "$brew_prefix/Cellar" -name INSTALL_RECEIPT.json)
+}
 
 function accpl.bcmd() {
   accpl.__brew commands
