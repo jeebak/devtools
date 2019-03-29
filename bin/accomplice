@@ -1374,19 +1374,34 @@ function accpl.genssl() {
 # Homebrew Helper Subcommands: poorly documented, and sequences of commands
 
 function accpl.bbott() {
-  local line src_path formula
+  local line src_path formula platform
 
   cmd-exists jq || die "jq command not found" 127
 
+  accpl.__brew update
   while read -r line; do
     if [ "$(jq .poured_from_bottle "$line")" = "false" ]; then
       src_path="$(jq .source.path "$line" | sed 's/"//g')"
       [[ -f "$src_path" ]] || die "$src_path does not exist" 1
       formula="$(basename "$src_path" ".rb")"
       echo "Checking: $line"
-      # TODO: figure out how to get arch (x86_64_linux)
-      if grep -q -E 'sha256 "[a-z0-9]+" => :x86_64_linux' "$src_path"; then
-        brew reinstall "$formula"
+      # Using qte for "Error: Broken pipe" which only seems to occur under Linux
+      if qte brew config | grep -E -q "Kernel: Linux"; then
+        platform="x86_64_linux"
+      else
+        if cmd-exists sw_vers; then
+          case "$(sw_vers -productVersion)" in
+            10.14*) platform="mojave";;
+            10.13*) platform="high_sierra";;
+            10.12*) platform="sierra";;
+            10.11*) platform="el_capitan";;
+            10.10*) platform="yosemite";;
+            10.9*)  platform="mavericks";;
+          esac
+        fi
+      fi
+      if grep -E 'sha256 "[a-z0-9]+" => :'$platform "$src_path"; then
+        accpl.__brew reinstall "$formula"
       fi
     fi
   done < <(find "$brew_prefix/Cellar" -name INSTALL_RECEIPT.json)
