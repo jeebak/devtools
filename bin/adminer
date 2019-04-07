@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+# TODO: add kill mechanism
+
+dest="$HOME/.config/adminer"
+[ ! -d "$dest" ] && mkdir -p "$dest"
+cd "$dest"
+
+open="$(command -v xdg-open || command -v open)"
+
+if [ ! -e "$dest/adminer.php" ]; then
+  url="https://github.com/vrana/adminer/releases"
+  latest="$(curl -IkLs "$url/latest" | col -b | grep Location | grep -E -o '[^/]+$')"
+  curl -L -o "$dest/adminer.php" "$url/download/$latest/adminer-${latest/v/}-en.php"
+fi
+
+adminer_url="$(pgrep -l -f "$dest/adminer.php" | grep 'php -S localhost:' | grep -o -e 'localhost:[0-9][0-9]*')"
+
+if [ -z "$adminer_url" ]; then
+  for port in $(seq 8080 8099); do
+    if ! nc -z localhost $port; then
+      adminer_url="localhost:$port"
+      (php -S "$adminer_url" "$dest/adminer.php" > /dev/null &)
+      sleep 2
+      break
+    fi
+  done
+fi
+
+"$open" "http://$adminer_url"
