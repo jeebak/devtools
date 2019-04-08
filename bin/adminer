@@ -17,7 +17,7 @@ fi
 adminer_url="$(pgrep -l -f "$dest/adminer.php" | grep 'php -S localhost:' | grep -o -e 'localhost:[0-9][0-9]*')"
 
 if [ -z "$adminer_url" ]; then
-  for port in $(seq 8080 8099); do
+  for port in $(seq 8675 8700); do
     if ! nc -z localhost $port; then
       adminer_url="localhost:$port"
       (php -S "$adminer_url" "$dest/adminer.php" > /dev/null &)
