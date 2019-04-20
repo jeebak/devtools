@@ -14,9 +14,18 @@ if [ ! -e "$dest/adminer.php" ]; then
   curl -L -o "$dest/adminer.php" "$url/download/$latest/adminer-${latest/v/}-en.php"
 fi
 
-adminer_url="$(pgrep -l -f "$dest/adminer.php" | grep 'php -S localhost:' | grep -o -e 'localhost:[0-9][0-9]*')"
+# BSD pgrep uses "-l" for "Long output"
+long_option="l"
+# but ...
+if pgrep --version 2> /dev/null | grep -q procps-ng; then
+  long_option="a"
+fi
 
-if [ -z "$adminer_url" ]; then
+adminer_url="$(pgrep -"$long_option" -f "$dest/adminer.php" | grep 'php -S localhost:' | grep -o -e 'localhost:[0-9][0-9]*')"
+
+if [ -n "$adminer_url" ]; then
+  port="${adminer_url/localhost:/}"
+else
   for port in $(seq 8675 8700); do
     if ! nc -z localhost $port; then
       adminer_url="localhost:$port"
