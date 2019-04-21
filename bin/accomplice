@@ -107,12 +107,33 @@ Usage: $accpl_self <subcommand> [options]
 
   Misc. Helper Subcommands:
     cgu       Run: composer global update
+    completion
+              Outputs super simple bash completion function
     ssh       Ssh's to ssh_options[:user]@#{gateway} from Capfile, based on current
               git branch
     exam      Examine archive files (list contents, good idea to run 1st, before...)
     ex        Extract archive files (NOTE: contents may not all be contained in a
                 folder and may litter your \$PWD)
 
+EOT
+}
+
+function accpl.completion() {
+  # TODO: show help/description for each subcommands as well
+
+  cat <<EOT
+if [ -n "\$ZSH_VERSION" ]; then
+  autoload -U +X compinit && compinit
+  # Allows for using the same completion function for both bash and zsh
+  autoload -U +X bashcompinit && bashcompinit
+fi
+
+_accomplice_completions() {
+  COMPREPLY=(\$(compgen -W "$(grep -E '^function accpl.[^_]+() {' "$0" | sed 's/function accpl\.//;s/() {.*//' | sort | tr '\n' ' ')" "\${COMP_WORDS[1]}"))
+}
+
+complete -F _accomplice_completions accomplice
+# Add this to your shell's rc file: eval "\$(accomplice completion)"
 EOT
 }
 
