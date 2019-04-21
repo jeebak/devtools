@@ -75,7 +75,28 @@ Usage: $accpl_self <subcommand> [options]
 
     vv        Run: diskutil verifyvolume \$1
                   # \$1=/path/to/mountpoint
+    completion
+              Outputs super simple bash completion function
 
+EOT
+}
+
+function accpl.completion() {
+  # TODO: show help/description for each subcommands as well
+
+  cat <<EOT
+if [ -n "\$ZSH_VERSION" ]; then
+  autoload -U +X compinit && compinit
+  # Allows for using the same completion function for both bash and zsh
+  autoload -U +X bashcompinit && bashcompinit
+fi
+
+_maccomplice_completions() {
+  COMPREPLY=(\$(compgen -W "$(grep -E '^function accpl.[^_]+() {' "$0" | sed 's/function accpl\.//;s/() {.*//' | sort | tr '\n' ' ')" "\${COMP_WORDS[1]}"))
+}
+
+complete -F _maccomplice_completions maccomplice
+# Add this to your shell's rc file: eval "\$(maccomplice completion)"
 EOT
 }
 
