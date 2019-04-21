@@ -85,7 +85,7 @@ function accpl.completion() {
   # TODO: show help/description for each subcommands as well
 
   cat <<EOT
-if [ -n "\$ZSH_VERSION" ]; then
+if [ "\${SHELL##*/}" = "zsh" ]; then
   autoload -U +X compinit && compinit
   # Allows for using the same completion function for both bash and zsh
   autoload -U +X bashcompinit && bashcompinit
