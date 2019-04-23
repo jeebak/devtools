@@ -2,16 +2,96 @@
 
 # TODO: add kill mechanism
 
+# basename: "${var##*/}"
+#  dirname: "${var%/*}"
+
 dest="$HOME/.config/adminer"
-[ ! -d "$dest" ] && mkdir -p "$dest"
-cd "$dest"
+[ ! -d "$dest/plugins" ] && mkdir -p "$dest/plugins"
+cd "$dest" || exit
 
 open="$(command -v xdg-open || command -v open)"
 
 if [ ! -e "$dest/adminer.php" ]; then
   url="https://github.com/vrana/adminer/releases"
   latest="$(curl -IkLs "$url/latest" | col -b | grep Location | grep -E -o '[^/]+$')"
-  curl -L -o "$dest/adminer.php" "$url/download/$latest/adminer-${latest/v/}-en.php"
+  echo "Downloading: $url/download/$latest/adminer-${latest/v/}-en.php"
+  curl -Ls -o "$dest/adminer.php" "$url/download/$latest/adminer-${latest/v/}-en.php"
+fi
+
+plugins=(
+  https://raw.github.com/vrana/adminer/master/plugins/plugin.php
+  https://raw.github.com/vrana/adminer/master/plugins/login-ssl.php
+  https://raw.github.com/vrana/adminer/master/plugins/tables-filter.php
+  https://raw.githubusercontent.com/smuuf/adminer-colorfields/master/colorfields.php
+  https://gist.githubusercontent.com/scr4bble/9ee4a9f1405ffc1465f59e03768e2768/raw/241efb913859575c2b178011c8fdbc4081b94feb/readable-dates.php
+  https://raw.githubusercontent.com/pematon/adminer-plugins/master/AdminerJsonPreview.php
+)
+
+for i in "${plugins[@]}"; do
+  plugin="${i##*/}"
+  if [ ! -e "$dest/plugins/${plugin}" ]; then
+    echo "Downloading: $i"
+    curl -Ls -o "$dest/plugins/${plugin}" "$i"
+  fi
+done
+
+if [ ! -e "$dest/index.php" ]; then
+  # https://www.adminer.org/en/plugins/#use
+  cat <<EOT > "$dest/index.php"
+<?php
+
+// Warning: Cannot modify header information - headers already sent by
+// (output started at /Users/\$USER/.config/adminer/local-configs.php:82)
+// in /Users/\$USER/.config/adminer/adminer.php on line 70
+ob_start();
+
+function adminer_object() {
+    // required to run any plugin
+    include_once "./plugins/plugin.php";
+
+    // autoloader
+    foreach (glob("plugins/*.php") as \$filename) {
+        include_once "./\$filename";
+    }
+
+    # TODO: add these programmatically, noting that some contructors takes args
+    \$plugins = [
+        // specify enabled plugins here
+        new AdminerTablesFilter,
+        new AdminerColorfields,
+        new AdminerReadableDates,
+        new AdminerJsonPreview,
+    ];
+
+    // For things like: new AdminerLoginSsl(\$ssl_certs);
+    // I keep: ~/.config/adminer/local-configs.php in a yadm repo
+    if (file_exists("./local-configs.php")) {
+      include_once "./local-configs.php";
+    }
+
+    return new AdminerPlugin(\$plugins);
+}
+
+// include original Adminer or Adminer Editor
+include "./adminer.php";
+
+ob_flush();
+EOT
+fi
+
+if [ ! -e "$dest/local-configs.php" ]; then
+  cat <<EOT > "$dest/local-configs.php"
+<?php
+  // https://www.php.net/manual/en/mysqli.ssl-set.php
+  \$ssl_certs = [
+    'key'  => '/path/to/key.pem',
+    'cert' => '/path/to/cert.pem',
+    'ca'   => '/path/to/ca.pem',
+  ];
+  if (count(array_filter(\$ssl_certs, 'file_exists'))) {
+    \$plugins[] = new AdminerLoginSsl(\$ssl_certs);
+  }
+EOT
 fi
 
 # BSD pgrep uses "-l" for "Long output"
@@ -21,15 +101,15 @@ if pgrep --version 2> /dev/null | grep -q procps-ng; then
   long_option="a"
 fi
 
-adminer_url="$(pgrep -"$long_option" -f "$dest/adminer.php" | grep 'php -S localhost:' | grep -o -e 'localhost:[0-9][0-9]*')"
+adminer_url="$(pgrep -"$long_option" -f "$dest/index.php" | grep 'php -S localhost:' | grep -o -e 'localhost:[0-9][0-9]*')"
 
 if [ -n "$adminer_url" ]; then
   port="${adminer_url/localhost:/}"
 else
   for port in $(seq 8675 8700); do
-    if ! nc -z localhost $port; then
+    if ! nc -z localhost "$port"; then
       adminer_url="localhost:$port"
-      (php -S "$adminer_url" "$dest/adminer.php" > /dev/null &)
+      (php -S "$adminer_url" "$dest/index.php" > /dev/null &)
       sleep 2
       break
     fi
