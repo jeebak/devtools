@@ -31,7 +31,7 @@ You've requested: win10-edge. While Microsoft is providing us with:
 it's only available as a .zip file. Until this Vagrantfile can be updated to
 automate this process, for now, you can manually download:
 
-  https://az792536.vo.msecnd.net/vms/VMBuild_20150916/Vagrant/MsEdge/MsEdge.Win10.Vagrant.zip
+  https://az792536.vo.msecnd.net/vms/VMBuild_20190311/Vagrant/MSEdge/MSEdge.Win10.Vagrant.zip
 
 and unzip it here (in this folder.) You'll wind up with the above .box file.
 
