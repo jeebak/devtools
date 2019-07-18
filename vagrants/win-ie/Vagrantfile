@@ -1,46 +1,45 @@
 # Usage:    vagrant up windowsVersion-IEversion
 #
-# Eg.       vagrant up xp-8
+# Eg.       vagrant up win10-edge
 #
 # Based off of: # https://gist.github.com/anthonysterling/7cb85670b36821122a4a
 boxes = {
-  "xp-6"       => "http://aka.ms/vagrant-xp-ie6",
-  "xp-8"       => "http://aka.ms/vagrant-xp-ie8",
-  "vista-7"    => "http://aka.ms/vagrant-vista-ie7",
-  "win7-8"     => "http://aka.ms/vagrant-win7-ie8",
-  "win7-9"     => "http://aka.ms/vagrant-win7-ie9",
-  "win7-10"    => "http://aka.ms/vagrant-win7-ie10",
-  "win7-11"    => "http://aka.ms/vagrant-win7-ie11",
-  "win8-10"    => "http://aka.ms/vagrant-win8-ie10",
-  "win8-11"    => "http://aka.ms/vagrant-win81-ie11",
-  "win10-edge" => "MsEdge - Win10.box",
+  # http://www.vagrantbox.es/
+  "xp-6"       => "http://aka.ms/ie6.xp.vagrant",
+  "xp-8"       => "http://aka.ms/ie8.xp.vagrant",
+  "vista-7"    => "http://aka.ms/ie7.vista.vagrant",
+  "win7-8"     => "http://aka.ms/ie8.win7.vagrant",
+  "win7-9"     => "http://aka.ms/ie9.win7.vagrant",
+  "win7-10"    => "http://aka.ms/ie10.win7.vagrant",
+  "win7-11"    => "http://aka.ms/ie11.win7.vagrant",
+  "win8-10"    => "http://aka.ms/ie10.win8.vagrant",
+  "win8-11"    => "http://aka.ms/ie11.win81.vagrant",
+  # Manually retrieve current from: https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/
+  "win10-edge" => "https://az792536.vo.msecnd.net/vms/VMBuild_20190311/Vagrant/MSEdge/MSEdge.Win10.Vagrant.zip",
+  # Since:
+  #   curl -sIL http://aka.ms/msedge.win10.vagrant | grep -o -E 'VMBuild_[0-9]+'
+  #   VMBuild_20150916
+  # The other old ones are fine
+}
+
+tmpdir = "#{ENV['HOME']}/.vagrant.d/tmp"
+box_files = {
+  "xp-6"       => "#{tmpdir}/IE6 - WinXP.box",
+  "xp-8"       => "#{tmpdir}/IE8 - WinXP.box",
+  "vista-7"    => "#{tmpdir}/IE7 - Vista.box",
+  "win7-8"     => "#{tmpdir}/IE8 - Win7.box",
+  "win7-9"     => "#{tmpdir}/IE9 - Win7.box",
+  "win7-10"    => "#{tmpdir}/IE10 - Win7.box",
+  "win7-11"    => "#{tmpdir}/IE11 - Win7.box",
+  "win8-10"    => "#{tmpdir}/IE10 - Win8.box",
+  "win8-11"    => "#{tmpdir}/IE11 - Win81.box",
+  "win10-edge" => "#{tmpdir}/MsEdge - Win10.box",
 }
 
 # required_plugins = %w( vagrant-triggers vagrant-vbox-snapshot )
 required_plugins = %w( )
 vagrant_root = File.dirname(__FILE__)
 box_exists = false
-
-if ARGV[1] == "win10-edge" && ! ( File.exist?(boxes["win10-edge"]) || File.exist?("#{vagrant_root}/.vagrant/machines/#{ARGV[1]}/virtualbox/id") )
-  puts <<EOT
-
-You've requested: win10-edge. While Microsoft is providing us with:
-
-  "#{boxes["win10-edge"]}"
-
-it's only available as a .zip file. Until this Vagrantfile can be updated to
-automate this process, for now, you can manually download:
-
-  https://az792536.vo.msecnd.net/vms/VMBuild_20190311/Vagrant/MSEdge/MSEdge.Win10.Vagrant.zip
-
-and unzip it here (in this folder.) You'll wind up with the above .box file.
-
-Strangely, they are both: 4.8GB, but are definately different files. Once the
-virtual is up and running, you may delete both the .zip and the .box file.
-
-EOT
-  exit
-end
 
 if ARGV[0] == "up"
   if ARGV.count == 1
@@ -62,12 +61,37 @@ if ['halt', 'provision', 'reload', 'ssh', 'ssh-config'].include? ARGV[0]
   exit
 end
 
+# The http://aka.ms/ URLs only provides .zip files, and vagrant can't unzip
+# them into the .box files, afaict :/.
+if File.exist?("#{vagrant_root}/.vagrant/machines/#{ARGV[1]}/virtualbox/id")
+  # Quick hack to delete .box file, "next" time
+  box_file = "#{box_files[ARGV[1]]}"
+  File.delete(box_file) if File.exist?(box_file)
+else
+  boxes.each do |name, url|
+    if ARGV[1] == name
+      if ! File.exist?(box_files[name])
+        tmpfile = "#{tmpdir}/#{name}.zip"
+
+        puts "Running: curl -L #{url} > #{tmpfile}"
+        system(       "curl -L #{url} > #{tmpfile}")
+
+        puts "Running: unzip -d #{tmpdir} #{tmpfile}"
+        system(       "unzip -d #{tmpdir} #{tmpfile}")
+
+        puts "Running: rm #{tmpfile}"
+        system(       "rm #{tmpfile}")
+      end
+    end
+  end
+end
+
 required_plugins.each do |plugin|
   system "vagrant plugin install #{plugin}" unless Vagrant.has_plugin? plugin
 end
 
 Vagrant.configure("2") do |config|
-  boxes.each do |name, url|
+  box_files.each do |name, url|
     config.vm.define name do |machine|
       machine.vm.box = name
       machine.vm.box_url = url
@@ -99,7 +123,10 @@ Vagrant.configure("2") do |config|
     #   Stderr: VBoxManage: error: Machine '55e6b27a-920a-4705-8e7f-71b125b38d11' is not currently running
     # so comemnting out:
     # vm.customize ["controlvm", :id, "vrde", "on"]
+    vm.customize ["guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 10000]
     vm.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+    vm.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    vm.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
     vm.customize ["modifyvm", :id, "--vram", "64"]
     vm.customize ["setextradata", :id, "GUI/SuppressMessages", "all" ]
     # https://forums.virtualbox.org/viewtopic.php?f=6&t=53684
