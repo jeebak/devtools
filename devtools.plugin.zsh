@@ -5,8 +5,6 @@ alias acc='accomplice'
 alias macc='maccomplice'
 alias ql='maccomplice ql'
 
-source "$PLUGIN_D/share/fzf/bindings.zsh"
-
 # Using aliases to avoid having to manipulate $PATH, for now
 alias artisan="$PLUGIN_D/bin/artisan"
 alias cap="$PLUGIN_D/bin/cap"
